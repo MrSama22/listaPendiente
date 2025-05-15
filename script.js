@@ -1,49 +1,54 @@
 let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        let currentEditingTaskId = null;
+let currentEditingTaskId = null;
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                processCommand();
-            }
-        }
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        processCommand();
+    }
+}
 
-        function processCommand() {
-            const commandInput = document.getElementById('commandInput');
-            const command = commandInput.value.toLowerCase();
+function processCommand() {
+    const commandInput = document.getElementById('commandInput');
+    const command = commandInput.value.toLowerCase();
 
-            let taskName = '';
-            let dueDate = null;
+    if (!command.trim()) {
+        alert('Por favor, ingresa un comando válido');
+        return;
+    }
 
-            if (command.includes('llamada')) {
-                taskName = command.split('llamada')[1].split('para')[0].trim();
-            } else if (command.includes('tarea')) {
-                taskName = command.split('tarea')[1].split('para')[0].trim();
-            }
+    let taskName = '';
+    let dueDate = null;
 
-            const dateText = command.split('para')[1]?.trim();
-            if (dateText) {
-                dueDate = parseDateText(dateText);
-            }
+    if (command.includes('llamada')) {
+        taskName = command.split('llamada')[1].split('para')[0].trim();
+    } else if (command.includes('tarea')) {
+        taskName = command.split('tarea')[1].split('para')[0].trim();
+    }
 
-            if (taskName) {
-                const task = {
-                    id: Date.now(),
-                    name: taskName,
-                    dueDate: dueDate ? dueDate.toISOString() : 'indefinido',
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                };
+    const dateText = command.split('para')[1]?.trim();
+    if (dateText) {
+        dueDate = parseDateText(dateText);
+    }
 
-                tasks.push(task);
-                saveTasks();
-                renderTasks();
-                commandInput.value = '';
-                
-                alert(`Tarea creada: "${taskName}" para ${formatDate(task.dueDate)}`);
-            } else {
-                alert('No se pudo interpretar el comando. Por favor, intenta de nuevo.');
-            }
-        }
+    if (taskName) {
+        const task = {
+            id: Date.now(),
+            name: taskName,
+            dueDate: dueDate ? dueDate.toISOString() : 'indefinido',
+            completed: false,
+            createdAt: new Date().toISOString()
+        };
+
+        tasks.push(task);
+        saveTasks();
+        renderTasks();
+        commandInput.value = '';
+        
+        alert(`Tarea creada: "${taskName}" para ${formatDate(task.dueDate)}`);
+    } else {
+        alert('No se pudo interpretar el comando. Por favor, intenta de nuevo.');
+    }
+}
 
         function parseDateText(dateText) {
             const today = new Date();
