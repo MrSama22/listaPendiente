@@ -35,15 +35,20 @@
     
     <p class="opciones">Opcion 2</p>
     <div class="form-group">
-    <label for="taskName">Nombre de la tarea:</label>
-    <input type="text" id="taskName" required>
+        <label for="taskName">Nombre de la tarea:</label>
+        <input type="text" id="taskName" required>
     </div>
-    
+
     <div class="form-group">
-    <label for="dueDate">Fecha límite (opcional):</label>
-    <input type="datetime-local" id="dueDate">
+        <label for="taskDate">Fecha (opcional):</label>
+        <input type="date" id="taskDate">
     </div>
-    
+
+    <div class="form-group">
+        <label for="taskTime">Hora (opcional):</label>
+        <input type="time" id="taskTime">
+    </div>
+
     <button onclick="addTask()">Añadir Tarea</button>
 
     <p class="tittle">LISTA PENDIENTES</p>
