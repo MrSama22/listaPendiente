@@ -1,5 +1,29 @@
-let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+// Configuración de Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAh43R__bDeeKDeIvj8mDhBuWHzMAR6wW8",
+    authDomain: "lista-pendientes-1fb7d.firebaseapp.com",
+    projectId: "lista-pendientes-1fb7d",
+    storageBucket: "lista-pendientes-1fb7d.firebasestorage.app",
+    messagingSenderId: "984310472254",
+    appId: "1:984310472254:web:18fa13d333b6b41fc03b6f",
+    measurementId: "G-PLXFY9T0PM",
+    databaseURL: "https://lista-pendientes-1fb7d-default-rtdb.firebaseio.com" // Añade esta línea
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const tasksRef = database.ref('tasks');
+
+let tasks = [];
 let currentEditingTaskId = null;
+
+// Escuchar cambios en Firebase
+tasksRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    tasks = data ? Object.values(data) : [];
+    renderTasks();
+});
 
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
@@ -32,16 +56,15 @@ function processCommand() {
 
     if (taskName) {
         const task = {
-            id: Date.now(),
+            id: Date.now().toString(), // Convertido a string para Firebase
             name: taskName,
             dueDate: dueDate ? dueDate.toISOString() : 'indefinido',
             completed: false,
             createdAt: new Date().toISOString()
         };
 
-        tasks.push(task);
-        saveTasks();
-        renderTasks();
+        // Agregar tarea directamente a Firebase
+        tasksRef.child(task.id).set(task);
         commandInput.value = '';
         
         alert(`Tarea creada: "${taskName}" para ${formatDate(task.dueDate)}`);
@@ -50,9 +73,11 @@ function processCommand() {
     }
 }
 
+// La función parseDateText se mantiene igual
 function parseDateText(dateText) {
+    // [Tu código existente de parseDateText]
     const today = new Date();
-    today.setSeconds(0, 0); // Eliminar segundos y milisegundos para comparaciones más precisas
+    today.setSeconds(0, 0);
     
     const months = {
         'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
@@ -165,14 +190,8 @@ function showEditModal(taskId) {
         }
     } else {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-
-        dateInput.value = `${year}-${month}-${day}`;
-        timeInput.value = `${hours}:${minutes}`;
+        dateInput.value = now.toISOString().split('T')[0];
+        timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
         includeTimeCheckbox.checked = false;
         timeInput.style.display = 'none';
     }
@@ -208,41 +227,30 @@ function saveEditedTask() {
 
     const task = tasks.find(t => t.id === currentEditingTaskId);
     if (task) {
-        task.name = taskNameInput.value.trim();
-
-        // Crear la fecha en la zona horaria local
         const [year, month, day] = dateInput.value.split('-').map(Number);
         let newDate = new Date(year, month - 1, day);
-        
-        // Obtener la fecha actual sin tiempo
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
         if (includeTime && timeInput.value) {
             const [hours, minutes] = timeInput.value.split(':').map(Number);
             newDate.setHours(hours, minutes, 0, 0);
             
-            // Verificar si la fecha y hora son anteriores a la actual
-            if (newDate < now) {
-                if (isToday(newDate)) {
-                    alert('No puedes establecer una hora anterior a la actual para tareas de hoy');
-                    return;
-                }
+            const now = new Date();
+            if (newDate < now && isToday(newDate)) {
+                alert('No puedes establecer una hora anterior a la actual para tareas de hoy');
+                return;
             }
         } else {
-            // Si no se incluye tiempo, establecer al final del día (23:59)
             newDate.setHours(23, 59, 0, 0);
         }
 
-        // Verificar si la fecha es anterior a hoy
-        if (newDate < todayStart && !includeTime) {
-            alert('No puedes establecer una fecha anterior a hoy');
-            return;
-        }
+        const updatedTask = {
+            ...task,
+            name: taskNameInput.value.trim(),
+            dueDate: newDate.toISOString()
+        };
 
-        task.dueDate = newDate.toISOString();
-        saveTasks();
-        renderTasks();
+        // Actualizar en Firebase
+        tasksRef.child(currentEditingTaskId).update(updatedTask);
         closeModal();
         alert('Tarea actualizada correctamente');
     }
@@ -261,23 +269,19 @@ function addTask() {
     let dueDate = 'indefinido';
     
     if (taskDate) {
-        // Crear la fecha en la zona horaria local
         const [year, month, day] = taskDate.split('-').map(Number);
         let newDate = new Date(year, month - 1, day);
         
         if (taskTime) {
-            // Si hay hora especificada
             const [hours, minutes] = taskTime.split(':').map(Number);
             newDate.setHours(hours, minutes, 0, 0);
             
-            // Verificar si la fecha y hora son anteriores a la actual
             const now = new Date();
             if (newDate < now) {
                 alert('No puedes establecer una fecha y hora anterior a la actual');
                 return;
             }
         } else {
-            // Si solo hay fecha, establecer al final del día
             newDate.setHours(23, 59, 0, 0);
         }
         
@@ -285,16 +289,15 @@ function addTask() {
     }
 
     const task = {
-        id: Date.now(),
+        id: Date.now().toString(),
         name: taskName,
         dueDate: dueDate,
         completed: false,
         createdAt: new Date().toISOString()
     };
 
-    tasks.push(task);
-    saveTasks();
-    renderTasks();
+    // Agregar directamente a Firebase
+    tasksRef.child(task.id).set(task);
     clearForm();
 }
 
@@ -302,19 +305,14 @@ function toggleTaskStatus(taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
         task.completed = !task.completed;
-        saveTasks();
-        renderTasks();
+        // Actualizar en Firebase
+        tasksRef.child(taskId).update({ completed: task.completed });
     }
 }
 
 function deleteTask(taskId) {
-    tasks = tasks.filter(t => t.id !== taskId);
-    saveTasks();
-    renderTasks();
-}
-
-function saveTasks() {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+    // Eliminar de Firebase
+    tasksRef.child(taskId).remove();
 }
 
 function isToday(date) {
@@ -330,11 +328,9 @@ function getRemainingDays(dueDate) {
     const now = new Date();
     const due = new Date(dueDate);
     
-    // Ajustar al inicio del día para comparaciones
     const nowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dueStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
     
-    // Si es el mismo día, comparar las horas
     if (isToday(due)) {
         if (due < now) {
             return 'Vencida';
@@ -348,16 +344,15 @@ function getRemainingDays(dueDate) {
         return `Faltan ${diffMinutes} minutos`;
     }
     
-    // Si la fecha es anterior a hoy
     if (dueStart < nowStart) {
         return 'Vencida';
     }
     
-    // Para días futuros
     const diffTime = dueStart.getTime() - nowStart.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `Faltan ${diffDays} días`;
 }
+
 function formatDate(dateString) {
     if (dateString === 'indefinido') return 'indefinido';
     
@@ -442,5 +437,5 @@ function clearForm() {
     document.getElementById('taskTime').value = '';
 }
 
-// Cargar tareas al iniciar
+// Inicializar la aplicación
 renderTasks();
