@@ -27,9 +27,8 @@
             <label for="commandInput">Comando rápido:</label>
             <div class="command-input-group">
                 <input type="text" id="commandInput" class="command-input" 
-                    placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana"
-                    onkeypress="handleKeyPress(event)">
-                <button onclick="processCommand()" class="add-task-button">Añadir tarea</button>
+                    placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana">
+                <button id="processCommandButton" class="add-task-button">Añadir tarea</button>
             </div>
         </div>
         
@@ -49,7 +48,7 @@
             <input type="time" id="taskTime">
         </div>
 
-        <button onclick="addTask()">Añadir Tarea</button>
+        <button id="addTaskButton">Añadir Tarea</button>
 
         <p class="tittle">LISTA PENDIENTES</p>
         <div class="task-list">
@@ -63,21 +62,21 @@
 
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" id="closeModalButton">&times;</span>
             <h3>Editar Tarea</h3>
             <div class="form-group">
                 <label for="editTaskName">Nombre de la tarea:</label>
                 <input type="text" id="editTaskName" required>
             </div>
             <div class="include-time-checkbox">
-                <input type="checkbox" id="includeTime" onchange="toggleTimeInput()">
+                <input type="checkbox" id="includeTime">
                 <label for="includeTime">Incluir hora específica</label>
             </div>
             <div class="date-time-inputs">
                 <input type="date" id="editDate">
                 <input type="time" id="editTime" style="display: none;">
             </div>
-            <button onclick="saveEditedTask()">Guardar</button>
+            <button id="saveEditButton">Guardar</button>
         </div>
     </div>
 
@@ -85,23 +84,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <!-- Firebase Firestore -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
-    <!-- Configuración de Firebase -->
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAh43R__bDeeKDeIvj8mDhBuWHzMAR6wW8",
-            authDomain: "lista-pendientes-1fb7d.firebaseapp.com",
-            projectId: "lista-pendientes-1fb7d",
-            storageBucket: "lista-pendientes-1fb7d.firebasestorage.app",
-            messagingSenderId: "984310472254",
-            appId: "1:984310472254:web:18fa13d333b6b41fc03b6f",
-            measurementId: "G-PLXFY9T0PM"
-        };
-
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-    </script>
-
+    
+    <!-- Tu script principal -->
     <script src="script.js"></script>
 </body>
 </html>
