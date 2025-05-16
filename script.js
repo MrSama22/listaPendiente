@@ -1,9 +1,35 @@
+// Configuración de Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAh43R__bDeeKDeIvj8mDhBuWHzMAR6wW8",
+    authDomain: "lista-pendientes-1fb7d.firebaseapp.com",
+    projectId: "lista-pendientes-1fb7d",
+    storageBucket: "lista-pendientes-1fb7d.firebasestorage.app",
+    messagingSenderId: "984310472254",
+    appId: "1:984310472254:web:18fa13d333b6b41fc03b6f",
+    measurementId: "G-PLXFY9T0PM"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+
 // Inicializar Firestore
 const db = firebase.firestore();
 const tasksCollection = db.collection('tasks');
 
+// Variables globales
 let tasks = [];
 let currentEditingTaskId = null;
+
+// Función para probar la conexión con Firebase
+async function testFirebaseConnection() {
+    try {
+        await db.collection('tasks').get();
+        console.log('Conexión con Firebase establecida correctamente');
+    } catch (error) {
+        console.error('Error al conectar con Firebase:', error);
+        alert('Error al conectar con la base de datos. Por favor, recarga la página.');
+    }
+}
 
 // Función para cargar tareas desde Firestore
 function loadTasks() {
@@ -16,6 +42,9 @@ function loadTasks() {
             });
         });
         renderTasks();
+    }, (error) => {
+        console.error("Error al cargar las tareas:", error);
+        alert('Error al cargar las tareas. Por favor, recarga la página.');
     });
 }
 
@@ -70,8 +99,40 @@ async function processCommand() {
 }
 
 function parseDateText(dateText) {
-    // [El resto de la función parseDateText permanece igual]
-    // ... [Mantén tu código actual de parseDateText]
+    const today = new Date();
+    today.setSeconds(0, 0);
+    
+    const months = {
+        'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
+        'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
+        'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+    };
+
+    if (dateText.startsWith('mañana')) {
+        let date = new Date(today);
+        date.setDate(today.getDate() + 1);
+        const horaMatch = dateText.match(/a las (\d{1,2}):(\d{2})/);
+        if (horaMatch) {
+            date.setHours(parseInt(horaMatch[1]), parseInt(horaMatch[2]), 0, 0);
+        } else {
+            date.setHours(23, 59, 0, 0);
+        }
+        return date;
+    }
+
+    if (dateText.startsWith('hoy')) {
+        let date = new Date(today);
+        const horaMatch = dateText.match(/a las (\d{1,2}):(\d{2})/);
+        if (horaMatch) {
+            date.setHours(parseInt(horaMatch[1]), parseInt(horaMatch[2]), 0, 0);
+        } else {
+            date.setHours(23, 59, 0, 0);
+        }
+        return date;
+    }
+
+    // ... [Resto del código de parseDateText permanece igual]
+    return null;
 }
 
 function showEditModal(taskId) {
@@ -83,23 +144,22 @@ function showEditModal(taskId) {
     const timeInput = document.getElementById('editTime');
     const includeTimeCheckbox = document.getElementById('includeTime');
 
+    if (!task) {
+        console.error('Tarea no encontrada');
+        return;
+    }
+
     taskNameInput.value = task.name;
 
     if (task.dueDate !== 'indefinido') {
         const date = new Date(task.dueDate);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-
-        dateInput.value = `${year}-${month}-${day}`;
-
+        dateInput.value = date.toISOString().split('T')[0];
+        
         const hasSpecificTime = date.getHours() !== 23 || date.getMinutes() !== 59;
         includeTimeCheckbox.checked = hasSpecificTime;
 
         if (hasSpecificTime) {
-            timeInput.value = `${hours}:${minutes}`;
+            timeInput.value = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
             timeInput.style.display = 'block';
         } else {
             timeInput.style.display = 'none';
@@ -149,20 +209,12 @@ async function saveEditedTask() {
             const [hours, minutes] = timeInput.value.split(':').map(Number);
             newDate.setHours(hours, minutes, 0, 0);
             
-            const now = new Date();
-            if (newDate < now && isToday(newDate)) {
+            if (newDate < new Date() && isToday(newDate)) {
                 alert('No puedes establecer una hora anterior a la actual para tareas de hoy');
                 return;
             }
         } else {
             newDate.setHours(23, 59, 0, 0);
-        }
-
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        if (newDate < todayStart && !includeTime) {
-            alert('No puedes establecer una fecha anterior a hoy');
-            return;
         }
 
         await tasksCollection.doc(currentEditingTaskId).update({
@@ -198,8 +250,7 @@ async function addTask() {
             const [hours, minutes] = taskTime.split(':').map(Number);
             newDate.setHours(hours, minutes, 0, 0);
             
-            const now = new Date();
-            if (newDate < now) {
+            if (newDate < new Date()) {
                 alert('No puedes establecer una fecha y hora anterior a la actual');
                 return;
             }
@@ -229,6 +280,10 @@ async function addTask() {
 async function toggleTaskStatus(taskId) {
     try {
         const task = tasks.find(t => t.id === taskId);
+        if (!task) {
+            console.error('Tarea no encontrada');
+            return;
+        }
         await tasksCollection.doc(taskId).update({
             completed: !task.completed
         });
@@ -247,6 +302,7 @@ async function deleteTask(taskId) {
     }
 }
 
+// Funciones de utilidad
 function isToday(date) {
     const today = new Date();
     return date.getFullYear() === today.getFullYear() &&
@@ -369,7 +425,19 @@ function clearForm() {
     document.getElementById('taskTime').value = '';
 }
 
-// Iniciar la aplicación
+// Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', () => {
+    // Probar conexión con Firebase
+    testFirebaseConnection();
+    
+    // Cargar tareas
     loadTasks();
+    
+    // Configurar event listeners
+    document.getElementById('addTaskButton').addEventListener('click', addTask);
+    document.getElementById('processCommandButton').addEventListener('click', processCommand);
+    document.getElementById('commandInput').addEventListener('keypress', handleKeyPress);
+    document.getElementById('includeTime').addEventListener('change', toggleTimeInput);
+    document.getElementById('closeModalButton').addEventListener('click', closeModal);
+    document.getElementById('saveEditButton').addEventListener('click', saveEditedTask);
 });
