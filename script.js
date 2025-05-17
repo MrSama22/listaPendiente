@@ -22,6 +22,11 @@ const firebaseConfig = {
   const loginBtn = document.getElementById('loginBtn');
   const registerBtn = document.getElementById('registerBtn');
   const logoutBtn = document.getElementById('logoutBtn');
+  const commandInputButton = document.querySelector('.add-task-button');
+const addTaskButton = document.querySelector('button:not(.add-task-button):not(.edit-button):not(.delete-button):not(#loginBtn):not(#registerBtn):not(#logoutBtn)');
+
+commandInputButton.addEventListener('click', processCommand);
+addTaskButton.addEventListener('click', addTask);
   
   // ---------- 2. Manejo de sesión ----------
   auth.onAuthStateChanged(user => {
