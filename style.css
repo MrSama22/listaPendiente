@@ -137,7 +137,7 @@ h2 {
 .edit-button {
     background-color: #2196F3;
     margin-right: 5px;
-    padding-left: 6px;
+    margin-left: 5px;
 
 }
 .edit-button:hover {
