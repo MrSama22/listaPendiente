@@ -476,7 +476,7 @@ const firebaseConfig = {
           <div class="task-actions">
               <button class="edit-button" data-id="${task.id}">✏️</button>
               <button class="toggle-status-button" data-id="${task.id}">
-                  ${task.completed ? '❌' : '✅'}
+                  ${task.completed ? '❌' : '✔️'}
               </button>
               <button class="delete-button" data-id="${task.id}">🗑️</button>
           </div>
