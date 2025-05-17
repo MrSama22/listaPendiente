@@ -59,6 +59,7 @@ button:hover {
 }
 .task-info {
     flex-grow: 1;
+    text-transform: capitalize;
 }
 .task-actions {
     display: flex;
