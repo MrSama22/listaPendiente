@@ -7,8 +7,29 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h2>Gestor de Tareas</h2>
+    <!-- UI de autenticación -->
+    <div id="authBox" class="container">
+        <h2>Iniciar sesión</h2>
+        <div class="form-group">
+            <label for="email">Correo electrónico:</label>
+            <input id="email" type="email" placeholder="Ingresa tu correo" required />
+        </div>
+        <div class="form-group">
+            <label for="password">Contraseña:</label>
+            <input id="password" type="password" placeholder="Ingresa tu contraseña" required />
+        </div>
+        <div class="auth-buttons">
+            <button id="loginBtn">Entrar</button>
+            <button id="registerBtn" class="secondary">Registrarse</button>
+        </div>
+    </div>
+
+    <!-- App de tareas (oculta hasta login) -->
+    <div id="appBox" class="container" style="display:none">
+        <div class="header-container">
+            <h2>Gestor de Tareas</h2>
+            <button id="logoutBtn" class="logout">Cerrar sesión</button>
+        </div>
 
         <div class="command-help">
             <p><strong>Comandos disponibles:</strong></p>
@@ -27,8 +48,9 @@
             <label for="commandInput">Comando rápido:</label>
             <div class="command-input-group">
                 <input type="text" id="commandInput" class="command-input" 
-                    placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana">
-                <button id="processCommandButton" class="add-task-button">Añadir tarea</button>
+                    placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana"
+                    onkeypress="handleKeyPress(event)">
+                <button onclick="processCommand()" class="add-task-button">Añadir tarea</button>
             </div>
         </div>
         
@@ -48,7 +70,7 @@
             <input type="time" id="taskTime">
         </div>
 
-        <button id="addTaskButton">Añadir Tarea</button>
+        <button onclick="addTask()">Añadir Tarea</button>
 
         <p class="tittle">LISTA PENDIENTES</p>
         <div class="task-list">
@@ -62,29 +84,30 @@
 
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <span class="close" id="closeModalButton">&times;</span>
+            <span class="close" onclick="closeModal()">&times;</span>
             <h3>Editar Tarea</h3>
             <div class="form-group">
                 <label for="editTaskName">Nombre de la tarea:</label>
                 <input type="text" id="editTaskName" required>
             </div>
             <div class="include-time-checkbox">
-                <input type="checkbox" id="includeTime">
+                <input type="checkbox" id="includeTime" onchange="toggleTimeInput()">
                 <label for="includeTime">Incluir hora específica</label>
             </div>
             <div class="date-time-inputs">
                 <input type="date" id="editDate">
                 <input type="time" id="editTime" style="display: none;">
             </div>
-            <button id="saveEditButton">Guardar</button>
+            <button onclick="saveEditedTask()">Guardar</button>
         </div>
     </div>
 
-   <!-- Firebase App (la base) -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<!-- Firebase Firestore -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-<!-- Tu script principal -->
-<script src="script.js"></script>
+    <!-- Firebase SDKs -->
+    <script defer src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <!-- Tu lógica -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
