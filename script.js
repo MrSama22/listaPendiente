@@ -471,7 +471,7 @@ function createTaskElement(task) {
     taskElement.innerHTML = `
         <div class="task-info">
             ${task.name} | 📅 ${formatDate(task.dueDate)} ${remainingDays} |
-            ${task.completed ? '✅' : '❌'}
+            ${task.completed ? '' : ''}
         </div>
         <div class="task-actions">
             <button class="edit-button" data-id="${task.id}">✏️</button>
