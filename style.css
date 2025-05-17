@@ -178,3 +178,69 @@ h2 {
     border-radius: 5px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+/* Estilos para la autenticación */
+#authBox {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 30px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Header con botón de logout */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+/* Botones de autenticación */
+button.secondary {
+    background: #2196F3;
+}
+
+button.secondary:hover {
+    background: #1976D2;
+}
+
+button.logout {
+    background: #FF9800;
+    padding: 8px 16px;
+}
+
+button.logout:hover {
+    background: #F57C00;
+}
+
+/* Centrar cajas */
+#authBox, #appBox {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Inputs de autenticación */
+#email, #password {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .header-container {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .auth-buttons {
+        flex-direction: column;
+    }
+}
