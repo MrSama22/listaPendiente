@@ -71,14 +71,14 @@ button:hover {
     top: 50%;
     transform: translateY(-50%) translateX(40px);
     display: flex;
-    background:rgb(187 212 230,0);
+    background:#a9c8df;
     border-radius: 20px;
-    /*box-shadow: 0 2px 90px rgba(0,0,0,0.15);*/
+    box-shadow: 0 10px 90px rgba(0,0,0,0.15);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s, transform 0.25s;
     z-index: 5;
-    padding: 5px;
+    padding: 1px;
 }
 .task-item.selected .task-actions {
     opacity: 1;
@@ -289,6 +289,8 @@ button.logout:hover {
     padding: 15px;
     background-color: #4CAF50;
     color: white;
+    width: 100%;
+    box-sizing: border-box;
 }
 .calendar-header button {
     background: transparent;
@@ -308,6 +310,8 @@ button.logout:hover {
     background-color: #f8f9fa;
     border-bottom: 1px solid #eee;
     font-weight: bold;
+    width: 100%;
+    box-sizing: border-box;
 }
 .weekdays div {
     text-align: center;
@@ -325,6 +329,8 @@ button.logout:hover {
     grid-auto-rows: minmax(60px, auto);
     border-top: 1px solid #e0e0e0;
     border-left: 1px solid #e0e0e0;
+    width: 100%;
+    box-sizing: border-box;
 }
 .calendar-day {
     border-right: 1px solid #e0e0e0;
@@ -397,7 +403,7 @@ button.logout:hover {
 }
 
 /* RESPONSIVE CALENDARIO */
-@media (max-width: 600px) {
+@media (max-width: 800px) {
     .header-container {
         flex-direction: column;
         gap: 10px;
@@ -409,9 +415,35 @@ button.logout:hover {
     .calendar-container {
         overflow-x: auto;
     }
+    .calendar-header,
+    .weekdays,
     .calendar-grid {
         min-width: 600px;
-        grid-auto-rows: minmax(50px, auto);
+        width: 600px;
+    }
+    .calendar-header {
+        position: sticky;
+        left: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background-color: #4CAF50;
+        color: white;
+        box-sizing: border-box;
+    }
+    .calendar-header h3 {
+        flex: 1 1 auto;
+        text-align: center;
+        margin: 0;
+        font-size: 18px;
+    }
+    .calendar-header button {
+        flex: 0 0 auto;
+    }
+    .weekdays {
+        position: sticky;
+        left: 0;
     }
     .calendar-day {
         min-width: 80px;
@@ -422,14 +454,12 @@ button.logout:hover {
         font-size: 10px;
         padding: 3px;
     }
-    .weekdays {
-        min-width: 600px;
-    }
     .command-input-group {
         flex-direction: column;
     }
     .task-actions {
         right: 5px;
+        background-color: #FFF;
     }
     .task-actions button {
         width: 32px;
