@@ -8,12 +8,12 @@ const firebaseConfig = {
     appId: "1:66598008920:web:a1e0526d4bca4a01a2f22d",
     measurementId: "G-JN6JXPB2LY"
 };
-  
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 db.enablePersistence().catch(() => console.warn('Sin modo offline'));
-  
+
 // ---------- 1. Referencias DOM ----------
 const authBox = document.getElementById('authBox');
 const appBox = document.getElementById('appBox');
@@ -22,7 +22,7 @@ const passInput = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
 const registerBtn = document.getElementById('registerBtn');
 const logoutBtn = document.getElementById('logoutBtn');
-  
+
 // ---------- 2. Event Listeners Iniciales ----------
 document.addEventListener('DOMContentLoaded', () => {
     // Listeners para autenticación
@@ -65,11 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveTaskBtn.addEventListener('click', saveEditedTask);
     }
 
-    const closeModalBtn = document.querySelector('.close');
-    if (closeModalBtn) {
-        closeModalBtn.addEventListener('click', closeModal);
-    }
-
     // Listeners para calendario
     const prevMonthBtn = document.getElementById('prevMonth');
     const nextMonthBtn = document.getElementById('nextMonth');
@@ -78,8 +73,22 @@ document.addEventListener('DOMContentLoaded', () => {
         nextMonthBtn.addEventListener('click', () => changeMonth(1));
     }
 });
-  
-// Delegación de eventos para botones dinámicos
+
+// Modal: cerrar con la X, fuera del modal o con ESC
+function closeModal() {
+    const modal = document.getElementById('editModal');
+    modal.style.display = 'none';
+    currentEditingTaskId = null;
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+document.querySelector('.close').addEventListener('click', closeModal);
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+});
+
+// Delegación de eventos para botones dinámicos y menú flotante
 document.addEventListener('click', function(event) {
     const target = event.target;
 
@@ -87,24 +96,39 @@ document.addEventListener('click', function(event) {
     if (target.closest('.edit-button')) {
         const taskId = target.closest('.edit-button').dataset.id;
         showEditModal(taskId);
+        event.stopPropagation();
+        return;
     }
     // Cambiar estado
     if (target.closest('.toggle-status-button')) {
         const taskId = target.closest('.toggle-status-button').dataset.id;
         toggleTaskStatus(taskId);
+        event.stopPropagation();
+        return;
     }
     // Eliminar tarea
     if (target.closest('.delete-button')) {
         const taskId = target.closest('.delete-button').dataset.id;
         deleteTask(taskId);
+        event.stopPropagation();
+        return;
     }
     // Editar tarea desde calendario
     if (target.closest('.calendar-task')) {
         const taskId = target.closest('.calendar-task').dataset.id;
         showEditModal(taskId);
+        event.stopPropagation();
+        return;
+    }
+    // Deseleccionar tarea si haces click fuera de una task-item
+    if (!target.closest('.task-item')) {
+        if (selectedTaskId !== null) {
+            selectedTaskId = null;
+            renderTasks();
+        }
     }
 });
-  
+
 // ---------- 3. Manejo de sesión ----------
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -118,12 +142,13 @@ auth.onAuthStateChanged(user => {
         unsubscribe && unsubscribe();
     }
 });
-  
+
 // ---------- 4. Firestore ----------
 let tasks = [];
 let tasksCol, unsubscribe;
 let currentEditingTaskId = null;
-  
+let selectedTaskId = null;
+
 function initTaskListeners(uid) {
     tasksCol = db.collection('users').doc(uid).collection('tasks');
     unsubscribe = tasksCol.orderBy('createdAt')
@@ -133,19 +158,19 @@ function initTaskListeners(uid) {
             renderCalendar(); // Actualizar calendario cuando cambian las tareas
         });
 }
-  
+
 // CRUD helpers
 const addTaskDB = task => tasksCol.add(task);
 const updateTaskDB = (id, data) => tasksCol.doc(id).update(data);
 const deleteTaskDB = id => tasksCol.doc(id).delete();
-  
+
 // ---------- 5. Funciones de la aplicación ----------
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         processCommand();
     }
 }
-  
+
 function processCommand() {
     const commandInput = document.getElementById('commandInput');
     const command = commandInput.value.toLowerCase();
@@ -183,7 +208,7 @@ function processCommand() {
         alert('No se pudo interpretar el comando. Por favor, intenta de nuevo.');
     }
 }
-  
+
 function parseDateText(dateText) {
     const today = new Date();
     today.setSeconds(0, 0);
@@ -266,7 +291,7 @@ function parseDateText(dateText) {
     }
     return null;
 }
-  
+
 function showEditModal(taskId) {
     currentEditingTaskId = taskId;
     const task = tasks.find(t => t.id === taskId);
@@ -310,17 +335,7 @@ function showEditModal(taskId) {
 
     modal.style.display = 'block';
 }
-  
-function closeModal() {
-    document.getElementById('editModal').style.display = 'none';
-    currentEditingTaskId = null;
-}
-  
-function toggleTimeInput() {
-    const timeInputContainer = document.getElementById('timeInputContainer');
-    timeInputContainer.style.display = document.getElementById('includeTime').checked ? 'block' : 'none';
-}
-  
+
 function saveEditedTask() {
     const taskNameInput = document.getElementById('editTaskName');
     const dateInput = document.getElementById('editDate');
@@ -363,7 +378,7 @@ function saveEditedTask() {
     closeModal();
     alert('Tarea actualizada correctamente');
 }
-  
+
 function addTask() {
     const taskName = document.getElementById('taskName').value;
     const taskDate = document.getElementById('taskDate').value;
@@ -393,6 +408,9 @@ function addTask() {
             newDate.setHours(23, 59, 0, 0);
         }
 
+        // Ajustar a UTC para guardar correctamente en Firestore
+        newDate = new Date(newDate.getTime() - newDate.getTimezoneOffset() * 60000);
+
         dueDate = newDate.toISOString();
     }
 
@@ -405,27 +423,27 @@ function addTask() {
 
     clearForm();
 }
-  
+
 function toggleTaskStatus(taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
         updateTaskDB(taskId, { completed: !task.completed });
     }
 }
-  
+
 function deleteTask(taskId) {
     if (confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
         deleteTaskDB(taskId);
     }
 }
-  
+
 function isToday(date) {
     const today = new Date();
     return date.getFullYear() === today.getFullYear() &&
         date.getMonth() === today.getMonth() &&
         date.getDate() === today.getDate();
 }
-  
+
 function getRemainingDays(dueDate) {
     if (dueDate === 'indefinido') return 'Indefinido';
 
@@ -456,7 +474,7 @@ function getRemainingDays(dueDate) {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `Faltan ${diffDays} días`;
 }
-  
+
 function formatDate(dateString) {
     if (dateString === 'indefinido') return 'indefinido';
 
@@ -478,32 +496,47 @@ function formatDate(dateString) {
         return date.toLocaleDateString('es-ES', options);
     }
 }
-  
+
+// ----------- MENÚ FLOTANTE HORIZONTAL CON EMOJIS -----------
 function createTaskElement(task) {
     const taskElement = document.createElement('div');
-    taskElement.className = `task-item ${task.completed ? 'completed' : ''}`;
+    taskElement.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
+    taskElement.tabIndex = 0;
 
-    const remainingDays = !task.completed && task.dueDate !== 'indefinido' ?
-        `| ⏱️ ${getRemainingDays(task.dueDate)}` :
-        '';
+    const remainingDays = !task.completed && task.dueDate !== 'indefinido'
+        ? `| ⏱️ ${getRemainingDays(task.dueDate)}`
+        : '';
 
     taskElement.innerHTML = `
         <div class="task-info">
             ${task.name} | 📅 ${formatDate(task.dueDate)} ${remainingDays} |
-            ${task.completed ? '' : ''}
         </div>
         <div class="task-actions">
-            <button class="edit-button" data-id="${task.id}">✏️</button>
-            <button class="toggle-status-button" data-id="${task.id}">
-                ${task.completed ? '❌' : '✔'}
+            <button class="edit-button" data-id="${task.id}" title="Editar">✏️</button>
+            <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">
+                ${task.completed ? '❌' : '✅'}
             </button>
-            <button class="delete-button" data-id="${task.id}">🗑️</button>
+            <button class="delete-button" data-id="${task.id}" title="Eliminar">🗑️</button>
         </div>
     `;
 
+    // Selección de tarea
+    taskElement.addEventListener('click', function(e) {
+        // Si el click fue en un botón, no cambiar selección aquí
+        if (
+            e.target.classList.contains('edit-button') ||
+            e.target.classList.contains('toggle-status-button') ||
+            e.target.classList.contains('delete-button')
+        ) {
+            return;
+        }
+        selectedTaskId = task.id === selectedTaskId ? null : task.id;
+        renderTasks();
+    });
+
     return taskElement;
 }
-  
+
 function renderTasks() {
     const completedTasksDiv = document.getElementById('completedTasks');
     const pendingTasksDiv = document.getElementById('pendingTasks');
@@ -530,7 +563,7 @@ function renderTasks() {
         completedTasksDiv.appendChild(taskElement);
     });
 }
-  
+
 function clearForm() {
     document.getElementById('taskName').value = '';
     document.getElementById('taskDate').value = '';
@@ -662,4 +695,15 @@ function addTasksToCalendarDay(dayEl, date) {
         
         dayEl.appendChild(taskEl);
     });
+}
+
+// Mostrar/ocultar input de hora en el modal
+function toggleTimeInput() {
+    const includeTimeCheckbox = document.getElementById('includeTime');
+    const timeInputContainer = document.getElementById('timeInputContainer');
+    if (includeTimeCheckbox.checked) {
+        timeInputContainer.style.display = 'block';
+    } else {
+        timeInputContainer.style.display = 'none';
+    }
 }
