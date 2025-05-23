@@ -305,53 +305,59 @@ function showEditModal(taskId) {
     taskNameInput.value = task.name;
 
     if (task.dueDate !== 'indefinido') {
-        // Convertir a fecha local para evitar desfase
         const date = new Date(task.dueDate);
-        const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-        dateInput.value = localDate.toISOString().split('T')[0];
+        
+        // Formatear la fecha para el input date (YYYY-MM-DD)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
 
         const hasSpecificTime = date.getHours() !== 23 || date.getMinutes() !== 59;
         includeTimeCheckbox.checked = hasSpecificTime;
 
         if (hasSpecificTime) {
-            timeInput.value = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+            // Formatear la hora para el input time (HH:MM)
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            timeInput.value = `${hours}:${minutes}`;
             timeInputContainer.style.display = 'block';
         } else {
             timeInput.value = '';
             timeInputContainer.style.display = 'none';
         }
     } else {
-        // Si es indefinido, mostrar el día actual local
+        // Si es indefinido, mostrar el día actual
         const now = new Date();
-        const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-        dateInput.value = localNow.toISOString().split('T')[0];
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
+        
         timeInput.value = '';
         includeTimeCheckbox.checked = false;
         timeInputContainer.style.display = 'none';
     }
 
-    // Guardar el valor original de dueDate para usarlo al guardar
-    dateInput.dataset.originalDueDate = task.dueDate;
-
     modal.style.display = 'block';
 }
 
+// Modificar la función saveEditedTask para corregir el manejo de la hora
 function saveEditedTask() {
     const taskNameInput = document.getElementById('editTaskName');
     const dateInput = document.getElementById('editDate');
     const timeInput = document.getElementById('editTime');
     const includeTime = document.getElementById('includeTime').checked;
-    const originalDueDate = dateInput.dataset.originalDueDate;
-
+    
     if (!taskNameInput.value.trim()) {
         alert('Por favor, ingrese un nombre para la tarea');
         return;
     }
 
-    let dueDate = originalDueDate;
+    let dueDate = 'indefinido';
 
     if (dateInput.value) {
-        // Crear fecha local correctamente
+        // Crear fecha local correctamente sin ajustes de zona horaria
         const [year, month, day] = dateInput.value.split('-').map(Number);
         let newDate = new Date(year, month - 1, day);
 
@@ -359,15 +365,11 @@ function saveEditedTask() {
             const [hours, minutes] = timeInput.value.split(':').map(Number);
             newDate.setHours(hours, minutes, 0, 0);
         } else {
+            // Si no se incluye hora, establecer al final del día
             newDate.setHours(23, 59, 0, 0);
         }
 
-        // Ajustar a UTC para guardar correctamente en Firestore
-        newDate = new Date(newDate.getTime() - newDate.getTimezoneOffset() * 60000);
-
         dueDate = newDate.toISOString();
-    } else {
-        dueDate = 'indefinido';
     }
 
     updateTaskDB(currentEditingTaskId, {
@@ -407,9 +409,6 @@ function addTask() {
         } else {
             newDate.setHours(23, 59, 0, 0);
         }
-
-        // Ajustar a UTC para guardar correctamente en Firestore
-        newDate = new Date(newDate.getTime() - newDate.getTimezoneOffset() * 60000);
 
         dueDate = newDate.toISOString();
     }
@@ -578,6 +577,12 @@ function initCalendar() {
     const now = new Date();
     currentCalendarDate = new Date(now.getFullYear(), now.getMonth(), 1);
     renderCalendar();
+    
+    // Asegurarse de que el contenedor del calendario sea scrolleable
+    const calendarContainer = document.querySelector('.calendar-container');
+    if (calendarContainer) {
+        calendarContainer.style.overflowX = 'auto';
+    }
 }
 
 function changeMonth(delta) {
@@ -623,6 +628,8 @@ function renderCalendar() {
     
     // Crear celdas para los días del mes actual
     const today = new Date();
+    let todayElement = null;
+    
     for (let i = 1; i <= totalDays; i++) {
         const isToday = today.getDate() === i && 
                         today.getMonth() === month && 
@@ -635,6 +642,11 @@ function renderCalendar() {
         addTasksToCalendarDay(dayEl, currentDate);
         
         calendarEl.appendChild(dayEl);
+        
+        // Guardar referencia al elemento del día actual
+        if (isToday) {
+            todayElement = dayEl;
+        }
     }
     
     // Calcular cuántos días del próximo mes necesitamos mostrar
@@ -645,6 +657,20 @@ function renderCalendar() {
     for (let i = 1; i <= nextMonthDays; i++) {
         const dayEl = createCalendarDay(i, true);
         calendarEl.appendChild(dayEl);
+    }
+    
+    // Centrar el día actual si estamos en el mes actual
+    if (todayElement && 
+        today.getMonth() === month && 
+        today.getFullYear() === year) {
+        setTimeout(() => {
+            // Usar setTimeout para asegurar que el DOM esté completamente renderizado
+            todayElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center', 
+                inline: 'center' 
+            });
+        }, 100);
     }
 }
 
