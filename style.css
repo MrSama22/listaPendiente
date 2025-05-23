@@ -71,7 +71,7 @@ button:hover {
     top: 50%;
     transform: translateY(-50%) translateX(40px);
     display: flex;
-    background:#a9c8df;
+    background:rgb(0,0,0,0);
     border-radius: 20px;
     box-shadow: 0 10px 90px rgba(0,0,0,0.15);
     opacity: 0;
@@ -124,6 +124,10 @@ button:hover {
 }
 .task-item.completed.selected {
     background-color: #bce7c0;
+}
+.task-item.completed.selected .task-actions {
+    background-color: rgb(0,0,0,0);
+
 }
 .task-info {
     flex-grow: 1;
@@ -363,7 +367,7 @@ button.logout:hover {
     color: #aaa;
 }
 .calendar-day.today {
-    background-color: #e8f5e9;
+    background-color: #bcfdbe;
 }
 .calendar-day.today .calendar-day-number {
     background-color: #4CAF50;
@@ -459,6 +463,9 @@ button.logout:hover {
     }
     .task-actions {
         right: 5px;
+        background-color: #FFF;
+    }
+    .task-item.completed.selected .task-actions{
         background-color: #FFF;
     }
     .task-actions button {
