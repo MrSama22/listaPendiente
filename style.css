@@ -406,72 +406,91 @@ button.logout:hover {
     white-space: nowrap;
 }
 
+/* Estilo para destacar una tarea en el calendario */
+.highlight-task {
+    background-color: #ffeb3b !important;
+    border-left: 3px solid #ffc107 !important;
+    animation: pulse 1s;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* RESPONSIVE CALENDARIO */
 @media (max-width: 800px) {
     .header-container {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
     }
     .auth-buttons {
-        flex-direction: column;
+    flex-direction: column;
     }
     .calendar-container {
-        overflow-x: auto;
+    overflow-x: auto;
     }
     .calendar-header,
     .weekdays,
     .calendar-grid {
-        min-width: 600px;
-        width: 600px;
+    min-width: 600px;
+    width: 600px;
     }
     .calendar-header {
-        position: sticky;
-        left: 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        background-color: #4CAF50;
-        color: white;
-        box-sizing: border-box;
+    position: sticky;
+    left: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #4CAF50;
+    color: white;
+    box-sizing: border-box;
     }
     .calendar-header h3 {
-        flex: 1 1 auto;
-        text-align: center;
-        margin: 0;
-        font-size: 18px;
+    flex: 1 1 auto;
+    text-align: center;
+    margin: 0;
+    font-size: 18px;
     }
     .calendar-header button {
-        flex: 0 0 auto;
+    flex: 0 0 auto;
     }
     .weekdays {
-        position: sticky;
-        left: 0;
+    position: sticky;
+    left: 0;
     }
     .calendar-day {
-        min-width: 80px;
-        min-height: 50px;
-        padding: 2px;
+    min-width: 80px;
+    min-height: 50px;
+    padding: 2px;
     }
     .calendar-task {
-        font-size: 10px;
-        padding: 3px;
+    font-size: 10px;
+    padding: 3px;
     }
     .command-input-group {
-        flex-direction: column;
+    flex-direction: column;
     }
     .task-actions {
-        right: 5px;
-        background-color: #FFF;
+    right: 5px;
+    background-color: #FFF;
     }
     .task-item.completed.selected .task-actions{
-        background-color: #FFF;
+    background-color: #FFF;
     }
     .task-actions button {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
-        margin: 0 2px;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    margin: 0 2px;
     }
 }
