@@ -494,3 +494,9 @@ button.logout:hover {
     margin: 0 2px;
     }
 }
+#pendingTasks , #completedTasks{
+    -webkit-user-select: none; /* para Safari */
+    -moz-user-select: none;    /* para Firefox */
+    -ms-user-select: none;     /* para Internet Explorer/Edge */
+    user-select: none;   
+}
