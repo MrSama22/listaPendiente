@@ -4,6 +4,10 @@ body {
     margin: 0 auto;
     padding: 20px;
     background-color: #f5f5f5;
+    -webkit-user-select: none; /* para Safari */
+    -moz-user-select: none;    /* para Firefox */
+    -ms-user-select: none;     /* para Internet Explorer/Edge */
+    user-select: none;   
 }
 .container {
     background-color: white;
@@ -493,10 +497,51 @@ button.logout:hover {
     font-size: 16px;
     margin: 0 2px;
     }
+    .copy-btn{
+        margin-left: 8px;
+    }
 }
-#pendingTasks , #completedTasks{
-    -webkit-user-select: none; /* para Safari */
-    -moz-user-select: none;    /* para Firefox */
-    -ms-user-select: none;     /* para Internet Explorer/Edge */
-    user-select: none;   
+
+/* Estilos para los botones de copiar */
+.copy-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.copy-group:hover {
+    background-color: #f0f0f0;
+}
+
+.copy-group span {
+    flex-grow: 1;
+    color: #666;
+    font-style: italic;
+    padding-left: 10px;
+}
+
+.copy-btn {
+    background: #2196F3;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+    min-width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+.copy-btn:hover {
+    background: #1976D2;
+    transform: scale(1.05);
 }
