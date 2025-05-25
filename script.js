@@ -72,6 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
     prevMonthBtn.addEventListener('click', () => changeMonth(-1));
     nextMonthBtn.addEventListener('click', () => changeMonth(1));
     }
+    
+    // Listeners para botones de copiar
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const text = this.parentElement.querySelector('span').innerText;
+            // Eliminar el guión inicial si existe
+            const cleanText = text.startsWith('- ') ? text.substring(2) : text;
+            navigator.clipboard.writeText(cleanText);
+            this.innerText = '✅';
+            setTimeout(() => { this.innerText = '📋'; }, 1000);
+        });
+    });
 });
 
 // Modal: cerrar con la X, fuera del modal o con ESC
