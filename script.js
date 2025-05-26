@@ -1,6 +1,6 @@
 // ---- 0. Firebase init ----
 const firebaseConfig = {
-    apiKey: "AIzaSyAQ7Q1Cue5exrewckwTkIHq-UgKzftXPHE",
+    apiKey: "AIzaSyAQ7Q1Cue5exrewckwTkIHq-UgKzftXPHE", // KEEP AS PLACEHOLDER
     authDomain: "task-manager-4d81c.firebaseapp.com",
     projectId: "task-manager-4d81c",
     storageBucket: "task-manager-4d81c.firebasestorage.app",
@@ -77,13 +77,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const text = this.parentElement.querySelector('span').innerText;
-            // Eliminar el guión inicial si existe
             const cleanText = text.startsWith('- ') ? text.substring(2) : text;
             navigator.clipboard.writeText(cleanText);
             this.innerText = '✅';
             setTimeout(() => { this.innerText = '📋'; }, 1000);
         });
     });
+
+    // Listeners para borrado de tareas completadas
+    const deleteCompletedBtn = document.getElementById('deleteCompletedBtn');
+    if (deleteCompletedBtn) {
+        deleteCompletedBtn.addEventListener('click', confirmThenDeleteCompletedTasks);
+    }
+
+    const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
+    if (autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.addEventListener('change', handleAutoDeleteFrequencyChange);
+    }
 });
 
 // Modal: cerrar con la X, fuera del modal o con ESC
@@ -104,35 +114,30 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('click', function(event) {
     const target = event.target;
 
-    // Editar tarea
     if (target.closest('.edit-button')) {
     const taskId = target.closest('.edit-button').dataset.id;
     showEditModal(taskId);
     event.stopPropagation();
     return;
     }
-    // Cambiar estado
     if (target.closest('.toggle-status-button')) {
     const taskId = target.closest('.toggle-status-button').dataset.id;
     toggleTaskStatus(taskId);
     event.stopPropagation();
     return;
     }
-    // Eliminar tarea
     if (target.closest('.delete-button')) {
     const taskId = target.closest('.delete-button').dataset.id;
     deleteTask(taskId);
     event.stopPropagation();
     return;
     }
-    // Editar tarea desde calendario
     if (target.closest('.calendar-task')) {
     const taskId = target.closest('.calendar-task').dataset.id;
     showEditModal(taskId);
     event.stopPropagation();
     return;
     }
-    // Deseleccionar tarea si haces click fuera de una task-item
     if (!target.closest('.task-item')) {
     if (selectedTaskId !== null) {
     selectedTaskId = null;
@@ -144,14 +149,24 @@ document.addEventListener('click', function(event) {
 // ---- 3. Manejo de sesión ----
 auth.onAuthStateChanged(user => {
     if (user) {
-    authBox.style.display = 'none';
-    appBox.style.display = 'block';
-    initTaskListeners(user.uid);
-    initCalendar();
+        authBox.style.display = 'none';
+        appBox.style.display = 'block';
+        initTaskListeners(user.uid); // Esto inicializa tasksCol y el listener de tareas
     } else {
-    appBox.style.display = 'none';
-    authBox.style.display = 'block';
-    unsubscribe && unsubscribe();
+        appBox.style.display = 'none';
+        authBox.style.display = 'block';
+        if (typeof unsubscribe === 'function') {
+            unsubscribe(); // Detener el listener de Firestore al cerrar sesión
+            unsubscribe = null; // Resetear la variable
+        }
+        tasks = []; // Limpiar tareas locales
+        renderTasks(); // Actualizar UI para mostrar listas vacías
+        renderCalendar(); // Actualizar calendario
+        const deleteCompletedBtn = document.getElementById('deleteCompletedBtn');
+        if (deleteCompletedBtn) deleteCompletedBtn.disabled = true;
+        const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
+        if (autoDeleteFrequencySelect) autoDeleteFrequencySelect.value = 'never';
+
     }
 });
 
@@ -162,12 +177,26 @@ let currentEditingTaskId = null;
 let selectedTaskId = null;
 
 function initTaskListeners(uid) {
+    if (unsubscribe) { // Si ya existe un listener, detenerlo antes de crear uno nuevo
+        unsubscribe();
+    }
     tasksCol = db.collection('users').doc(uid).collection('tasks');
+    let firstLoad = true;
+
     unsubscribe = tasksCol.orderBy('createdAt')
     .onSnapshot(snap => {
-    tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderTasks();
-    renderCalendar(); // Actualizar calendario cuando cambian las tareas
+        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTasks();
+        renderCalendar(); 
+
+        if (firstLoad) {
+            loadUserSettings(uid); 
+            checkAndPerformAutoDelete(uid); 
+            initCalendar(); 
+            firstLoad = false;
+        }
+    }, err => {
+        console.error("Error escuchando cambios en tareas:", err);
     });
 }
 
@@ -175,6 +204,17 @@ function initTaskListeners(uid) {
 const addTaskDB = task => tasksCol.add(task);
 const updateTaskDB = (id, data) => tasksCol.doc(id).update(data);
 const deleteTaskDB = id => tasksCol.doc(id).delete();
+
+// Helper function para borrar múltiples tareas usando batch
+async function deleteMultipleTasksByIds(taskIds) {
+    if (!taskIds || taskIds.length === 0 || !tasksCol) return;
+    const batch = db.batch();
+    taskIds.forEach(id => {
+        const taskRef = tasksCol.doc(id);
+        batch.delete(taskRef);
+    });
+    await batch.commit();
+}
 
 // ---- 5. Funciones de la aplicación ----
 function handleKeyPress(event) {
@@ -286,7 +326,9 @@ function parseDateText(dateText) {
     let targetDay = daysOfWeek[day];
     let daysToAdd = targetDay - currentDay;
 
-    if (daysToAdd <= 0) daysToAdd += 7;
+    if (daysToAdd <= 0 && !dateText.includes('esta semana')) daysToAdd += 7; // Si es un día pasado Y NO es "esta semana", ir a la siguiente.
+    else if (daysToAdd < 0 && dateText.includes('esta semana')) return null; // Ej: "lunes de esta semana" y hoy es miércoles.
+
     daysToAdd += weekOffset * 7;
 
     targetDate.setDate(today.getDate() + daysToAdd);
@@ -307,6 +349,7 @@ function parseDateText(dateText) {
 function showEditModal(taskId) {
     currentEditingTaskId = taskId;
     const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
     const modal = document.getElementById('editModal');
     const taskNameInput = document.getElementById('editTaskName');
     const dateInput = document.getElementById('editDate');
@@ -318,8 +361,6 @@ function showEditModal(taskId) {
 
     if (task.dueDate !== 'indefinido') {
     const date = new Date(task.dueDate);
-    
-    // Formatear la fecha para el input date (YYYY-MM-DD)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -329,7 +370,6 @@ function showEditModal(taskId) {
     includeTimeCheckbox.checked = hasSpecificTime;
 
     if (hasSpecificTime) {
-    // Formatear la hora para el input time (HH:MM)
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     timeInput.value = `${hours}:${minutes}`;
@@ -339,7 +379,6 @@ function showEditModal(taskId) {
     timeInputContainer.style.display = 'none';
     }
     } else {
-    // Si es indefinido, mostrar el día actual
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -354,7 +393,6 @@ function showEditModal(taskId) {
     modal.style.display = 'block';
 }
 
-// Modificar la función saveEditedTask para corregir el manejo de la hora
 function saveEditedTask() {
     const taskNameInput = document.getElementById('editTaskName');
     const dateInput = document.getElementById('editDate');
@@ -369,7 +407,6 @@ function saveEditedTask() {
     let dueDate = 'indefinido';
 
     if (dateInput.value) {
-    // Crear fecha local correctamente sin ajustes de zona horaria
     const [year, month, day] = dateInput.value.split('-').map(Number);
     let newDate = new Date(year, month - 1, day);
 
@@ -377,10 +414,8 @@ function saveEditedTask() {
     const [hours, minutes] = timeInput.value.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
     } else {
-    // Si no se incluye hora, establecer al final del día
     newDate.setHours(23, 59, 0, 0);
     }
-
     dueDate = newDate.toISOString();
     }
 
@@ -413,15 +448,14 @@ function addTask() {
     const [hours, minutes] = taskTime.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
 
-    const now = new Date();
-    if (newDate < now) {
-    alert('No puedes establecer una fecha y hora anterior a la actual');
-    return;
-    }
+    // const now = new Date(); // Commented out as per original, re-evaluate if needed
+    // if (newDate < now) {
+    // alert('No puedes establecer una fecha y hora anterior a la actual');
+    // return;
+    // }
     } else {
     newDate.setHours(23, 59, 0, 0);
     }
-
     dueDate = newDate.toISOString();
     }
 
@@ -431,7 +465,6 @@ function addTask() {
     completed: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-
     clearForm();
 }
 
@@ -508,7 +541,6 @@ function formatDate(dateString) {
     }
 }
 
-// ---- MENÚ FLOTANTE HORIZONTAL CON EMOJIS ----
 function createTaskElement(task) {
     const taskElement = document.createElement('div');
     taskElement.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
@@ -532,9 +564,7 @@ function createTaskElement(task) {
     </div>
     `;
 
-    // Selección de tarea
     taskElement.addEventListener('click', function(e) {
-    // Si el click fue en un botón, no cambiar selección aquí
     if (
     e.target.classList.contains('edit-button') ||
     e.target.classList.contains('toggle-status-button') ||
@@ -546,111 +576,34 @@ function createTaskElement(task) {
     renderTasks();
     });
 
-    // Agregar evento de presionar y mantener (longpress)
     let pressTimer;
-    let isLongPress = false;
-
     taskElement.addEventListener('mousedown', function(e) {
-        // Solo procesar si no es un click en un botón
-        if (
-            e.target.classList.contains('edit-button') ||
-            e.target.classList.contains('toggle-status-button') ||
-            e.target.classList.contains('delete-button')
-        ) {
-            return;
-        }
-        
-        pressTimer = setTimeout(() => {
-            isLongPress = true;
-            handleLongPress(task);
-        }, 500); // 500ms para considerar un longpress
+        if ( e.target.classList.contains('edit-button') || e.target.classList.contains('toggle-status-button') || e.target.classList.contains('delete-button') ) return;
+        pressTimer = setTimeout(() => handleLongPress(task), 500);
     });
-
     taskElement.addEventListener('touchstart', function(e) {
-        // Solo procesar si no es un toque en un botón
-        if (
-            e.target.classList.contains('edit-button') ||
-            e.target.classList.contains('toggle-status-button') ||
-            e.target.classList.contains('delete-button')
-        ) {
-            return;
-        }
-        
-        pressTimer = setTimeout(() => {
-            isLongPress = true;
-            handleLongPress(task);
-        }, 500); // 500ms para considerar un longpress
+        if ( e.target.classList.contains('edit-button') || e.target.classList.contains('toggle-status-button') || e.target.classList.contains('delete-button') ) return;
+        pressTimer = setTimeout(() => handleLongPress(task), 500);
     });
-
-    // Cancelar el timer si se suelta antes de tiempo
-    taskElement.addEventListener('mouseup', function() {
-        clearTimeout(pressTimer);
-        setTimeout(() => { isLongPress = false; }, 100);
-    });
-
-    taskElement.addEventListener('mouseleave', function() {
-        clearTimeout(pressTimer);
-        setTimeout(() => { isLongPress = false; }, 100);
-    });
-
-    taskElement.addEventListener('touchend', function() {
-        clearTimeout(pressTimer);
-        setTimeout(() => { isLongPress = false; }, 100);
-    });
-
-    taskElement.addEventListener('touchcancel', function() {
-        clearTimeout(pressTimer);
-        setTimeout(() => { isLongPress = false; }, 100);
-    });
-
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => 
+        taskElement.addEventListener(evt, () => clearTimeout(pressTimer))
+    );
     return taskElement;
 }
 
-// Función para manejar el longpress en una tarea
 function handleLongPress(task) {
-    // Si la tarea no tiene fecha definida, no hacer nada
-    if (task.dueDate === 'indefinido') {
-        return;
-    }
-
-    // Obtener la fecha de la tarea
+    if (task.dueDate === 'indefinido') return;
     const taskDate = new Date(task.dueDate);
-    
-    // Cambiar al mes de la tarea si es diferente al mes actual
-    const currentMonth = currentCalendarDate.getMonth();
-    const currentYear = currentCalendarDate.getFullYear();
-    
-    if (taskDate.getMonth() !== currentMonth || taskDate.getFullYear() !== currentYear) {
+    if (taskDate.getMonth() !== currentCalendarDate.getMonth() || taskDate.getFullYear() !== currentCalendarDate.getFullYear()) {
         currentCalendarDate = new Date(taskDate.getFullYear(), taskDate.getMonth(), 1);
         renderCalendar();
     }
-    
-    // Buscar el elemento de la tarea en el calendario
     setTimeout(() => {
-        const calendarTaskElements = document.querySelectorAll('.calendar-task');
-        let targetTaskElement = null;
-        
-        calendarTaskElements.forEach(el => {
-            if (el.dataset.id === task.id) {
-                targetTaskElement = el;
-            }
-        });
-        
+        const targetTaskElement = document.querySelector(`.calendar-task[data-id="${task.id}"]`);
         if (targetTaskElement) {
-            // Hacer scroll hasta la tarea en el calendario
-            targetTaskElement.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center',
-                inline: 'center'
-            });
-            
-            // Destacar la tarea brevemente cambiando su color
+            targetTaskElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
             targetTaskElement.classList.add('highlight-task');
-            
-            // Volver al color normal después de un segundo
-            setTimeout(() => {
-                targetTaskElement.classList.remove('highlight-task');
-            }, 1000);
+            setTimeout(() => targetTaskElement.classList.remove('highlight-task'), 1000);
         }
     }, 100);
 }
@@ -663,7 +616,7 @@ function renderTasks() {
     pendingTasksDiv.innerHTML = '';
 
     const pendingTasks = tasks.filter(t => !t.completed);
-    const completedTasks = tasks.filter(t => t.completed);
+    const completedTasksArray = tasks.filter(t => t.completed); // Renamed to avoid conflict
 
     pendingTasks.sort((a, b) => {
     if (a.dueDate === 'indefinido') return 1;
@@ -676,10 +629,16 @@ function renderTasks() {
     pendingTasksDiv.appendChild(taskElement);
     });
 
-    completedTasks.forEach(task => {
+    completedTasksArray.forEach(task => {
     const taskElement = createTaskElement(task);
     completedTasksDiv.appendChild(taskElement);
     });
+
+    // Update state of "Eliminar Tareas Completadas" button
+    const deleteCompletedBtn = document.getElementById('deleteCompletedBtn');
+    if (deleteCompletedBtn) {
+        deleteCompletedBtn.disabled = completedTasksArray.length === 0;
+    }
 }
 
 function clearForm() {
@@ -692,15 +651,12 @@ function clearForm() {
 let currentCalendarDate = new Date();
 
 function initCalendar() {
-    // Iniciar en el mes actual
     const now = new Date();
     currentCalendarDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    renderCalendar();
-    
-    // Asegurarse de que el contenedor del calendario sea scrolleable
+    // renderCalendar(); // renderCalendar is called by onSnapshot now after first load
     const calendarContainer = document.querySelector('.calendar-container');
     if (calendarContainer) {
-    calendarContainer.style.overflowX = 'auto';
+        calendarContainer.style.overflowX = 'auto';
     }
 }
 
@@ -718,84 +674,62 @@ function renderCalendar() {
     const year = currentCalendarDate.getFullYear();
     const month = currentCalendarDate.getMonth();
     
-    // Actualizar el encabezado del mes y año
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     currentMonthYearEl.textContent = `${monthNames[month]} ${year}`;
     
-    // Limpiar el calendario
     calendarEl.innerHTML = '';
     
-    // Obtener el primer día del mes (ajustado para que la semana comience el lunes)
     const firstDay = new Date(year, month, 1);
-    let startingDay = firstDay.getDay() - 1; // Ajustar para que lunes sea 0
-    if (startingDay < 0) startingDay = 6; // Si es domingo (0-1=-1), ajustar a 6
+    let startingDay = firstDay.getDay() - 1; 
+    if (startingDay < 0) startingDay = 6; 
     
-    // Obtener el último día del mes
     const lastDay = new Date(year, month + 1, 0);
     const totalDays = lastDay.getDate();
-    
-    // Obtener el último día del mes anterior
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     
-    // Crear celdas para los días del mes anterior
     for (let i = 0; i < startingDay; i++) {
     const dayNum = prevMonthLastDay - startingDay + i + 1;
     const dayEl = createCalendarDay(dayNum, true);
     calendarEl.appendChild(dayEl);
     }
     
-    // Crear celdas para los días del mes actual
     const today = new Date();
     let todayElement = null;
     
     for (let i = 1; i <= totalDays; i++) {
-    const isToday = today.getDate() === i && 
+    const isTodayFlag = today.getDate() === i && 
     today.getMonth() === month && 
     today.getFullYear() === year;
     
-    const dayEl = createCalendarDay(i, false, isToday);
-    
-    // Agregar tareas para este día
+    const dayEl = createCalendarDay(i, false, isTodayFlag);
     const currentDate = new Date(year, month, i);
     addTasksToCalendarDay(dayEl, currentDate);
-    
     calendarEl.appendChild(dayEl);
     
-    // Guardar referencia al elemento del día actual
-    if (isToday) {
+    if (isTodayFlag) {
     todayElement = dayEl;
     }
     }
     
-    // Calcular cuántos días del próximo mes necesitamos mostrar
     const totalCells = Math.ceil((startingDay + totalDays) / 7) * 7;
     const nextMonthDays = totalCells - (startingDay + totalDays);
     
-    // Crear celdas para los días del próximo mes
     for (let i = 1; i <= nextMonthDays; i++) {
     const dayEl = createCalendarDay(i, true);
     calendarEl.appendChild(dayEl);
     }
     
-    // Centrar el día actual si estamos en el mes actual
-    if (todayElement && 
-    today.getMonth() === month && 
-    today.getFullYear() === year) {
+    if (todayElement && today.getMonth() === month && today.getFullYear() === year) {
     setTimeout(() => {
-    // Usar setTimeout para asegurar que el DOM esté completamente renderizado
-    todayElement.scrollIntoView({ 
-    behavior: 'smooth', 
-    block: 'center', 
-    inline: 'center' 
-    });
+    todayElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
     }, 100);
     }
 }
 
-function createCalendarDay(dayNum, isOtherMonth, isToday = false) {
+function createCalendarDay(dayNum, isOtherMonth, isTodayFlag = false) {
     const dayEl = document.createElement('div');
-    dayEl.className = `calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}`;
+    dayEl.className = `calendar-day${isOtherMonth ? ' other-month' : ''}${isTodayFlag ? ' today' : ''}`;
     
     const dayNumberEl = document.createElement('div');
     dayNumberEl.className = 'calendar-day-number';
@@ -806,20 +740,16 @@ function createCalendarDay(dayNum, isOtherMonth, isToday = false) {
 }
 
 function addTasksToCalendarDay(dayEl, date) {
-    // Filtrar tareas para este día
     const dayTasks = tasks.filter(task => {
     if (task.completed || task.dueDate === 'indefinido') return false;
-    
     const taskDate = new Date(task.dueDate);
     return taskDate.getDate() === date.getDate() && 
     taskDate.getMonth() === date.getMonth() && 
     taskDate.getFullYear() === date.getFullYear();
     });
     
-    // Ordenar tareas por hora
     dayTasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
     
-    // Agregar tareas al día
     dayTasks.forEach(task => {
     const taskEl = document.createElement('div');
     taskEl.className = 'calendar-task';
@@ -832,17 +762,11 @@ function addTasksToCalendarDay(dayEl, date) {
     if (hasSpecificTime) {
     timeStr = `${String(taskDate.getHours()).padStart(2, '0')}:${String(taskDate.getMinutes()).padStart(2, '0')} - `;
     }
-    
-    taskEl.innerHTML = `
-    <div class="calendar-task-time">${timeStr}</div>
-    ${task.name}
-    `;
-    
+    taskEl.innerHTML = `<div class="calendar-task-time">${timeStr}</div>${task.name}`;
     dayEl.appendChild(taskEl);
     });
 }
 
-// Mostrar/ocultar input de hora en el modal
 function toggleTimeInput() {
     const includeTimeCheckbox = document.getElementById('includeTime');
     const timeInputContainer = document.getElementById('timeInputContainer');
@@ -850,5 +774,124 @@ function toggleTimeInput() {
     timeInputContainer.style.display = 'block';
     } else {
     timeInputContainer.style.display = 'none';
+    }
+}
+
+// ---- Funciones para Borrar Tareas Completadas ----
+const USER_SETTINGS_KEY_PREFIX = 'taskManagerUserSettings_';
+
+function saveUserSetting(userId, settingKey, value) {
+    if (!userId) return;
+    try {
+        localStorage.setItem(`${USER_SETTINGS_KEY_PREFIX}${userId}_${settingKey}`, JSON.stringify(value));
+    } catch (e) {
+        console.warn("No se pudo guardar la configuración del usuario en localStorage:", e);
+    }
+}
+
+function getUserSetting(userId, settingKey) {
+    if (!userId) return null;
+    try {
+        const value = localStorage.getItem(`${USER_SETTINGS_KEY_PREFIX}${userId}_${settingKey}`);
+        return value ? JSON.parse(value) : null;
+    } catch (e) {
+        console.warn("No se pudo obtener la configuración del usuario de localStorage:", e);
+        return null;
+    }
+}
+
+async function confirmThenDeleteCompletedTasks() {
+    const completedTasksToDelete = tasks.filter(t => t.completed);
+    if (completedTasksToDelete.length === 0) {
+        alert('No hay tareas completadas para eliminar.');
+        return;
+    }
+
+    if (confirm(`¿Estás seguro de que deseas eliminar ${completedTasksToDelete.length} tarea(s) completada(s)? Esta acción no se puede deshacer.`)) {
+        const idsToDelete = completedTasksToDelete.map(t => t.id);
+        try {
+            await deleteMultipleTasksByIds(idsToDelete);
+            alert(`${idsToDelete.length} tarea(s) completada(s) han sido eliminada(s).`);
+            // renderTasks será llamado por onSnapshot
+        } catch (error) {
+            console.error("Error eliminando tareas completadas:", error);
+            alert("Error al eliminar tareas completadas.");
+        }
+    }
+}
+
+function handleAutoDeleteFrequencyChange() {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
+    const frequency = autoDeleteFrequencySelect.value;
+    saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
+    saveUserSetting(currentUser.uid, 'lastAutoDeleteTimestamp', new Date().getTime()); // Resetear timestamp
+    alert('Configuración de borrado automático guardada.');
+    checkAndPerformAutoDelete(currentUser.uid); // Verificar inmediatamente
+}
+
+function loadUserSettings(userId) {
+    const frequency = getUserSetting(userId, 'autoDeleteFrequency');
+    const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
+    if (frequency && autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.value = frequency;
+    } else if (autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.value = 'never'; // Default
+    }
+}
+
+async function checkAndPerformAutoDelete(userId) {
+    if (!userId || !tasksCol) {
+        console.log("Usuario no autenticado o colección de tareas no lista para auto-borrado.");
+        return;
+    }
+
+    const frequency = getUserSetting(userId, 'autoDeleteFrequency');
+    if (!frequency || frequency === 'never') {
+        // console.log("Borrado automático de tareas completadas está desactivado.");
+        return;
+    }
+
+    let lastDeleteTimestamp = getUserSetting(userId, 'lastAutoDeleteTimestamp');
+    if (!lastDeleteTimestamp) {
+        saveUserSetting(userId, 'lastAutoDeleteTimestamp', new Date().getTime());
+        console.log("Inicializando timestamp para borrado automático.");
+        return;
+    }
+
+    const now = new Date().getTime();
+    let intervalMs = 0;
+
+    switch (frequency) {
+        case 'daily':   intervalMs = 24 * 60 * 60 * 1000; break;
+        case 'weekly':  intervalMs = 7 * 24 * 60 * 60 * 1000; break;
+        case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break; // Approx.
+        default: return;
+    }
+
+    if (now - lastDeleteTimestamp > intervalMs) {
+        const completedTasksToDelete = tasks.filter(t => t.completed);
+
+        if (completedTasksToDelete.length > 0) {
+            console.log(`Borrando automáticamente ${completedTasksToDelete.length} tareas completadas (frecuencia: ${frequency}).`);
+            const idsToDelete = completedTasksToDelete.map(t => t.id);
+            try {
+                await deleteMultipleTasksByIds(idsToDelete);
+                console.log(`${idsToDelete.length} tareas completadas borradas automáticamente.`);
+                saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
+            } catch (error) {
+                console.error("Error durante el borrado automático de tareas completadas:", error);
+            }
+        } else {
+            // console.log("No hay tareas completadas para borrar automáticamente en este ciclo.");
+            // Actualizar el timestamp incluso si no se borró nada, para marcar que se hizo la revisión.
+            saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
+        }
+    } else {
+        // const timeLeft = intervalMs - (now - lastDeleteTimestamp);
+        // const hoursLeft = (timeLeft / (1000 * 60 * 60)).toFixed(1);
+        // console.log(`Próximo borrado automático de tareas completadas en aproximadamente ${hoursLeft} horas.`);
     }
 }
