@@ -8,7 +8,6 @@
     <link rel="icon" href="image-removebg-preview (11) (1).png">
 </head>
 <body>
-    <!-- UI de autenticación -->
     <div id="authBox" class="container">
         <h2>Iniciar sesión</h2>
         <div class="form-group">
@@ -21,7 +20,6 @@
         <button id="registerBtn" class="secondary">Registrarse</button>
     </div>
 
-    <!-- UI principal de la aplicación -->
     <div id="appBox" class="container" style="display:none">
         <div class="header-container">
             <h2>Gestor de Tareas</h2>
@@ -89,7 +87,20 @@
 
         <button class="add-task">Añadir Tarea</button>
 
+        
         <p class="tittle">LISTA DE TAREAS</p>
+        <div class="completed-tasks-controls">
+            <div class="form-group">
+                <label for="autoDeleteFrequency">Borrar completadas automáticamente cada:</label>
+                <select id="autoDeleteFrequency">
+                    <option value="never" selected>Nunca</option>
+                    <option value="daily">Día</option>
+                    <option value="weekly">Semana</option>
+                    <option value="monthly">Mes</option>
+                </select>
+            </div>
+            <button id="deleteCompletedBtn" class="danger-btn" disabled>Eliminar Todas Las Tareas Completadas</button>
+        </div>
         <div class="task-list">
             <h3 class="section-header">Tareas Completadas:</h3>
             <div id="completedTasks"></div>
@@ -98,7 +109,6 @@
             <div id="pendingTasks"></div>
         </div>
 
-        <!-- Calendario -->
         <p class="tittle">CALENDARIO DE TAREAS</p>
         <div class="calendar-container">
             <div class="calendar-header">
@@ -119,7 +129,6 @@
         </div>
     </div>
 
-    <!-- Modal de edición -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
@@ -144,12 +153,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
-    <!-- Tu script -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
