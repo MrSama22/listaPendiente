@@ -29,12 +29,14 @@ input[type="datetime-local"],
 input[type="date"],
 input[type="time"],
 input[type="email"],
-input[type="password"] {
+input[type="password"],
+select { /* Added select here */
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    box-sizing: border-box; /* Ensure padding doesn't expand width */
 }
 button {
     background-color: #4CAF50;
@@ -48,6 +50,10 @@ button {
 }
 button:hover {
     background-color: #45a049;
+}
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 .task-list {
     margin-top: 20px;
@@ -275,12 +281,14 @@ button.logout:hover {
     margin: 0 auto;
 }
 #email, #password {
-    width: 100%;
+    width: 100%; /* Ensure it takes full width of its parent */
     padding: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 10px; /* Added margin-bottom for spacing */
     border: 1px solid #ddd;
     border-radius: 4px;
+    box-sizing: border-box; /* Add box-sizing */
 }
+
 /* Estilos para el calendario */
 .calendar-container {
     margin-top: 30px;
@@ -429,6 +437,59 @@ button.logout:hover {
     }
 }
 
+/* Controles para borrar tareas completadas */
+.completed-tasks-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0f0; /* Slightly different background */
+    border-radius: 8px; /* Consistent border-radius */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.completed-tasks-controls .form-group {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-grow: 1; /* Allow it to take space */
+}
+
+.completed-tasks-controls label {
+    margin-bottom: 0;
+    font-weight: normal; /* Lighter font weight for label */
+    white-space: nowrap;
+}
+
+#autoDeleteFrequency {
+    padding: 8px 10px; /* Adjust padding */
+    border: 1px solid #ccc; /* Slightly darker border */
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 120px; /* Minimum width for the select */
+    flex-grow: 1; /* Allow it to take available space within form-group */
+}
+
+button.danger-btn {
+    background-color: #f44336; /* Red */
+    color: white;
+    flex-shrink: 0; /* Prevent button from shrinking too much */
+    width: 100%;
+}
+button.danger-btn:hover {
+    background-color: #d32f2f;
+}
+button.danger-btn:disabled {
+    background-color: #ff8a80; /* Lighter red when disabled */
+    color: #ffebee;
+    cursor: not-allowed;
+}
+
+
 /* RESPONSIVE CALENDARIO */
 @media (max-width: 800px) {
     .header-container {
@@ -500,6 +561,16 @@ button.logout:hover {
     .copy-btn{
         margin-left: 8px;
     }
+    .completed-tasks-controls {
+        flex-direction: column; /* Stack controls vertically on smaller screens */
+        align-items: stretch; /* Make items take full width */
+    }
+    .completed-tasks-controls .form-group {
+        width: 100%; /* Make form group take full width */
+    }
+    #autoDeleteFrequency {
+        width: 100%; /* Make select take full width */
+    }
 }
 
 /* Estilos para los botones de copiar */
@@ -540,7 +611,6 @@ button.logout:hover {
     justify-content: center;
     
 }
-
 .copy-btn:hover {
     background: #1976D2;
     transform: scale(1.05);
