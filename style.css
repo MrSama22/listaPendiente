@@ -470,7 +470,7 @@ button.logout:hover {
     border: 1px solid #ccc; /* Slightly darker border */
     border-radius: 4px;
     font-size: 14px;
-    min-width: 120px; /* Minimum width for the select */
+    min-width: 12px; /* Minimum width for the select */
     flex-grow: 1; /* Allow it to take available space within form-group */
 }
 
@@ -569,7 +569,7 @@ button.danger-btn:disabled {
         width: 100%; /* Make form group take full width */
     }
     #autoDeleteFrequency {
-        width: 100%; /* Make select take full width */
+        width: 100%;
     }
 }
 
