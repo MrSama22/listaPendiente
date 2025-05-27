@@ -843,17 +843,35 @@ function handleAutoDeleteFrequencyChange() {
     saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
     localStorage.setItem(`lastAutoDeleteTimestamp_${currentUser.uid}`, new Date().getTime());
 
-    alert('Configuración de borrado automático guardada.');
     checkAndPerformAutoDelete(currentUser.uid);
 }
 
-async function loadUserSettings(userId) {
-    const frequency = await getUserSetting(userId, 'autoDeleteFrequency');
+let settingsUnsubscribe = null;
+
+function loadUserSettings(userId) {
+    if (!userId || !db) return;
+
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
-    if (autoDeleteFrequencySelect) {
-        autoDeleteFrequencySelect.value = frequency || 'never';
+    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
+
+    // Detener listener previo si existe
+    if (typeof settingsUnsubscribe === 'function') {
+        settingsUnsubscribe();
     }
+
+    // Escuchar en tiempo real los cambios de configuración
+    settingsUnsubscribe = settingsRef.onSnapshot(doc => {
+        if (doc.exists) {
+            const data = doc.data();
+            if (autoDeleteFrequencySelect && data.autoDeleteFrequency) {
+                autoDeleteFrequencySelect.value = data.autoDeleteFrequency;
+            }
+        }
+    }, error => {
+        console.error("Error al escuchar configuración de usuario:", error);
+    });
 }
+
 
 
 async function checkAndPerformAutoDelete(userId) {
