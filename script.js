@@ -24,6 +24,13 @@ const registerBtn = document.getElementById('registerBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
 // ---- 2. Event Listeners Iniciales ----
+// ---- LISTENER para Select de borrado automático ----
+document.addEventListener('DOMContentLoaded', () => {
+    const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
+    if (autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.addEventListener('change', handleAutoDeleteFrequencyChange);
+    }
+});
 document.addEventListener('DOMContentLoaded', () => {
     // Listeners para autenticación
     loginBtn.addEventListener('click', () => {
@@ -646,7 +653,6 @@ function renderTasks() {
     }
 }
 
-
 function clearForm() {
     document.getElementById('taskName').value = '';
     document.getElementById('taskDate').value = '';
@@ -786,33 +792,23 @@ function toggleTimeInput() {
 // ---- Funciones para Borrar Tareas Completadas ----
 const USER_SETTINGS_KEY_PREFIX = 'taskManagerUserSettings_';
 
-async function saveUserSetting(userId, settingKey, value) {
-    if (!userId || !db) return;
-
-    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
-    try {
-        await settingsRef.set({ [settingKey]: value }, { merge: true });
-    } catch (error) {
-        console.error("Error guardando configuración en Firestore:", error);
-    }
+function saveUserSetting(userId, settingKey, value) {
+    if (!userId) return;
+    return db.collection('users').doc(userId).set({
+        settings: {
+            [settingKey]: value
+        }
+    }, { merge: true });
 }
 
 async function getUserSetting(userId, settingKey) {
-    if (!userId || !db) return null;
-
-    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
-    try {
-        const doc = await settingsRef.get();
-        if (doc.exists) {
-            const data = doc.data();
-            return data[settingKey] || null;
-        }
-    } catch (error) {
-        console.error("Error leyendo configuración desde Firestore:", error);
+    if (!userId) return null;
+    const doc = await db.collection('users').doc(userId).get();
+    if (doc.exists) {
+        return doc.data().settings?.[settingKey] ?? null;
     }
     return null;
 }
-
 async function confirmThenDeleteCompletedTasks() {
     const completedTasksToDelete = tasks.filter(t => t.completed);
     if (completedTasksToDelete.length === 0) {
@@ -833,97 +829,50 @@ async function confirmThenDeleteCompletedTasks() {
     }
 }
 
-function handleAutoDeleteFrequencyChange() {
+
+async function handleAutoDeleteFrequencyChange() {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
     const frequency = autoDeleteFrequencySelect.value;
-
-    saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
-    localStorage.setItem(`lastAutoDeleteTimestamp_${currentUser.uid}`, new Date().getTime());
-
+    await saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
+    await saveUserSetting(currentUser.uid, 'lastAutoDeleteTimestamp', Date.now());
+    alert('Configuración de borrado automático guardada.');
     checkAndPerformAutoDelete(currentUser.uid);
 }
 
-let settingsUnsubscribe = null;
-
-function loadUserSettings(userId) {
-    if (!userId || !db) return;
-
+async function loadUserSettings(userId) {
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
-    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
-
-    // Detener listener previo si existe
-    if (typeof settingsUnsubscribe === 'function') {
-        settingsUnsubscribe();
+    const frequency = await getUserSetting(userId, 'autoDeleteFrequency');
+    if (frequency && autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.value = frequency;
+    } else if (autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.value = 'never';
     }
-
-    // Escuchar en tiempo real los cambios de configuración
-    settingsUnsubscribe = settingsRef.onSnapshot(doc => {
-        if (doc.exists) {
-            const data = doc.data();
-            if (autoDeleteFrequencySelect && data.autoDeleteFrequency) {
-                autoDeleteFrequencySelect.value = data.autoDeleteFrequency;
-            }
-        }
-    }, error => {
-        console.error("Error al escuchar configuración de usuario:", error);
-    });
 }
 
 
-
 async function checkAndPerformAutoDelete(userId) {
-    if (!userId || !tasksCol) {
-        console.log("Usuario no autenticado o colección de tareas no lista para auto-borrado.");
-        return;
-    }
+    if (!userId || !tasksCol) return;
 
-    const frequency = getUserSetting(userId, 'autoDeleteFrequency');
-    if (!frequency || frequency === 'never') {
-        // console.log("Borrado automático de tareas completadas está desactivado.");
-        return;
-    }
+    const frequency = await getUserSetting(userId, 'autoDeleteFrequency');
+    if (!frequency || frequency === 'never') return;
 
-    let lastDeleteTimestamp = getUserSetting(userId, 'lastAutoDeleteTimestamp');
-    if (!lastDeleteTimestamp) {
-        saveUserSetting(userId, 'lastAutoDeleteTimestamp', new Date().getTime());
-        console.log("Inicializando timestamp para borrado automático.");
-        return;
-    }
-
-    const now = new Date().getTime();
+    let lastDeleteTimestamp = await getUserSetting(userId, 'lastAutoDeleteTimestamp');
+    const now = Date.now();
     let intervalMs = 0;
 
     switch (frequency) {
-        case 'daily':   intervalMs = 24 * 60 * 60 * 1000; break;
-        case 'weekly':  intervalMs = 7 * 24 * 60 * 60 * 1000; break;
-        case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break; // Approx.
-        default: return;
+        case 'daily': intervalMs = 86400000; break;
+        case 'weekly': intervalMs = 604800000; break;
+        case 'monthly': intervalMs = 2592000000; break;
     }
 
-    if (now - lastDeleteTimestamp > intervalMs) {
+    if (!lastDeleteTimestamp || now - lastDeleteTimestamp > intervalMs) {
         const completedTasksToDelete = tasks.filter(t => t.completed);
-
-        if (completedTasksToDelete.length > 0) {
-            console.log(`Borrando automáticamente ${completedTasksToDelete.length} tareas completadas (frecuencia: ${frequency}).`);
-            const idsToDelete = completedTasksToDelete.map(t => t.id);
-            try {
-                await deleteMultipleTasksByIds(idsToDelete);
-                console.log(`${idsToDelete.length} tareas completadas borradas automáticamente.`);
-                saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
-            } catch (error) {
-                console.error("Error durante el borrado automático de tareas completadas:", error);
-            }
-        } else {
-            // console.log("No hay tareas completadas para borrar automáticamente en este ciclo.");
-            // Actualizar el timestamp incluso si no se borró nada, para marcar que se hizo la revisión.
-            saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
-        }
-    } else {
-        // const timeLeft = intervalMs - (now - lastDeleteTimestamp);
-        // const hoursLeft = (timeLeft / (1000 * 60 * 60)).toFixed(1);
-        // console.log(`Próximo borrado automático de tareas completadas en aproximadamente ${hoursLeft} horas.`);
+        const idsToDelete = completedTasksToDelete.map(t => t.id);
+        await deleteMultipleTasksByIds(idsToDelete);
+        await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
     }
 }
