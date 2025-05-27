@@ -786,24 +786,31 @@ function toggleTimeInput() {
 // ---- Funciones para Borrar Tareas Completadas ----
 const USER_SETTINGS_KEY_PREFIX = 'taskManagerUserSettings_';
 
-function saveUserSetting(userId, settingKey, value) {
-    if (!userId) return;
+async function saveUserSetting(userId, settingKey, value) {
+    if (!userId || !db) return;
+
+    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
     try {
-        localStorage.setItem(`${USER_SETTINGS_KEY_PREFIX}${userId}_${settingKey}`, JSON.stringify(value));
-    } catch (e) {
-        console.warn("No se pudo guardar la configuración del usuario en localStorage:", e);
+        await settingsRef.set({ [settingKey]: value }, { merge: true });
+    } catch (error) {
+        console.error("Error guardando configuración en Firestore:", error);
     }
 }
 
-function getUserSetting(userId, settingKey) {
-    if (!userId) return null;
+async function getUserSetting(userId, settingKey) {
+    if (!userId || !db) return null;
+
+    const settingsRef = db.collection('users').doc(userId).collection('settings').doc('preferences');
     try {
-        const value = localStorage.getItem(`${USER_SETTINGS_KEY_PREFIX}${userId}_${settingKey}`);
-        return value ? JSON.parse(value) : null;
-    } catch (e) {
-        console.warn("No se pudo obtener la configuración del usuario de localStorage:", e);
-        return null;
+        const doc = await settingsRef.get();
+        if (doc.exists) {
+            const data = doc.data();
+            return data[settingKey] || null;
+        }
+    } catch (error) {
+        console.error("Error leyendo configuración desde Firestore:", error);
     }
+    return null;
 }
 
 async function confirmThenDeleteCompletedTasks() {
@@ -832,21 +839,22 @@ function handleAutoDeleteFrequencyChange() {
 
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
     const frequency = autoDeleteFrequencySelect.value;
+
     saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
-    saveUserSetting(currentUser.uid, 'lastAutoDeleteTimestamp', new Date().getTime()); // Resetear timestamp
+    localStorage.setItem(`lastAutoDeleteTimestamp_${currentUser.uid}`, new Date().getTime());
+
     alert('Configuración de borrado automático guardada.');
-    checkAndPerformAutoDelete(currentUser.uid); // Verificar inmediatamente
+    checkAndPerformAutoDelete(currentUser.uid);
 }
 
-function loadUserSettings(userId) {
-    const frequency = getUserSetting(userId, 'autoDeleteFrequency');
+async function loadUserSettings(userId) {
+    const frequency = await getUserSetting(userId, 'autoDeleteFrequency');
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
-    if (frequency && autoDeleteFrequencySelect) {
-        autoDeleteFrequencySelect.value = frequency;
-    } else if (autoDeleteFrequencySelect) {
-        autoDeleteFrequencySelect.value = 'never'; // Default
+    if (autoDeleteFrequencySelect) {
+        autoDeleteFrequencySelect.value = frequency || 'never';
     }
 }
+
 
 async function checkAndPerformAutoDelete(userId) {
     if (!userId || !tasksCol) {
