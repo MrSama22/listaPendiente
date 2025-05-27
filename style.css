@@ -628,3 +628,21 @@ button.danger-btn:disabled {
     border-top: 1px solid #c4c4c4;
     border-radius: 2px;
 }
+.anuncio{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0f0; /* Slightly different background */
+    border-radius: 8px; /* Consistent border-radius */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+
+}
+.anuncio:nth-child(odd){
+
+    box-shadow: 0 -7px 4px rgba(0, 0, 0, 0.1);
+
+}
