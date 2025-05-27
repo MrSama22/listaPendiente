@@ -289,7 +289,7 @@ function parseDateText(dateText) {
     if (horaMatch) {
     date.setHours(parseInt(horaMatch[1]), parseInt(horaMatch[2]), 0, 0);
     } else {
-    date.setHours(0, 0, 0, 0);
+    date.setHours(23, 59, 0, 0);
     }
     return date;
     }
@@ -610,36 +610,42 @@ function handleLongPress(task) {
 
 function renderTasks() {
     const completedTasksDiv = document.getElementById('completedTasks');
-    const pendingTasksDiv = document.getElementById('pendingTasks');
+    const undefinedTasksDiv = document.getElementById('undefinedTasks');
+    const datedTasksDiv = document.getElementById('datedTasks');
 
     completedTasksDiv.innerHTML = '';
-    pendingTasksDiv.innerHTML = '';
+    undefinedTasksDiv.innerHTML = '';
+    datedTasksDiv.innerHTML = '';
 
     const pendingTasks = tasks.filter(t => !t.completed);
-    const completedTasksArray = tasks.filter(t => t.completed); // Renamed to avoid conflict
+    const completedTasksArray = tasks.filter(t => t.completed);
 
-    pendingTasks.sort((a, b) => {
-    if (a.dueDate === 'indefinido') return 1;
-    if (b.dueDate === 'indefinido') return -1;
-    return new Date(a.dueDate) - new Date(b.dueDate);
+    const undefinedPending = pendingTasks.filter(t => t.dueDate === 'indefinido');
+    const datedPending = pendingTasks.filter(t => t.dueDate !== 'indefinido');
+
+    datedPending.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+    undefinedPending.forEach(task => {
+        const taskElement = createTaskElement(task);
+        undefinedTasksDiv.appendChild(taskElement);
     });
 
-    pendingTasks.forEach(task => {
-    const taskElement = createTaskElement(task);
-    pendingTasksDiv.appendChild(taskElement);
+    datedPending.forEach(task => {
+        const taskElement = createTaskElement(task);
+        datedTasksDiv.appendChild(taskElement);
     });
 
     completedTasksArray.forEach(task => {
-    const taskElement = createTaskElement(task);
-    completedTasksDiv.appendChild(taskElement);
+        const taskElement = createTaskElement(task);
+        completedTasksDiv.appendChild(taskElement);
     });
 
-    // Update state of "Eliminar Tareas Completadas" button
     const deleteCompletedBtn = document.getElementById('deleteCompletedBtn');
     if (deleteCompletedBtn) {
         deleteCompletedBtn.disabled = completedTasksArray.length === 0;
     }
 }
+
 
 function clearForm() {
     document.getElementById('taskName').value = '';
