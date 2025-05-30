@@ -646,3 +646,9 @@ button.danger-btn:disabled {
     box-shadow: 0 -7px 4px rgba(0, 0, 0, 0.1);
 
 }
+#forgotPasswordLink {
+    font-size: 14px;
+    display: inline-block;
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
