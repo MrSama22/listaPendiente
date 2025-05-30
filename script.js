@@ -94,6 +94,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (autoDeleteFrequencySelect) {
         autoDeleteFrequencySelect.addEventListener('change', handleAutoDeleteFrequencyChange);
     }
+    // olvidar cobtraseña
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', () => {
+        const email = emailInput.value;
+        if (!email) {
+            alert("Por favor, ingresa tu correo electrónico primero.");
+            return;
+        }
+
+        auth.sendPasswordResetEmail(email)
+            .then(() => {
+                alert("Se ha enviado un correo para restablecer tu contraseña.");
+            })
+            .catch(err => {
+                alert("Error al enviar el correo de restablecimiento: " + err.message);
+            });
+    });
+}
+
 });
 
 // Modal: cerrar con la X, fuera del modal o con ESC
