@@ -9,19 +9,26 @@
 </head>
 <body>
     <div id="authBox" class="container">
-        
-        <h2>Iniciar sesión</h2>
-        <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su contraseña que desea establecer </p>
-        <div class="form-group">
-            <input id="email" type="email" placeholder="Correo electrónico" required>
-        </div>
-        <div class="form-group">
-            <input id="password" type="password" placeholder="Contraseña" required>
-        </div>
-        <button id="loginBtn">Iniciar Sesión</button>
-        <button id="registerBtn" class="secondary">Registrarse</button>
-        <p class="anuncio">- prontamente pondremos el campo de olvidado contraseña y modulo de seleccion de outfits</p>
+    <h2>Iniciar sesión</h2>
+    <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su contraseña que desea establecer </p>
+
+    <div class="form-group">
+        <input id="email" type="email" placeholder="Correo electrónico" required>
     </div>
+    <div class="form-group">
+        <input id="password" type="password" placeholder="Contraseña" required>
+    </div>
+
+    <!-- NUEVO: Enlace de contraseña olvidada -->
+    <div class="form-group">
+        <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu contraseña?</a>
+    </div>
+
+    <button id="loginBtn">Iniciar Sesión</button>
+    <button id="registerBtn" class="secondary">Registrarse</button>
+
+    <p class="anuncio">- prontamente pondremos el campo de olvidado contraseña y modulo de seleccion de outfits</p>
+</div>
 
     <div id="appBox" class="container" style="display:none">
         <div class="header-container">
@@ -169,5 +176,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
     <script type="module" src="script.js"></script>
+
+    
 </body>
 </html>
