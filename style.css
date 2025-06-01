@@ -646,3 +646,69 @@ button.danger-btn:disabled {
     box-shadow: 0 -7px 4px rgba(0, 0, 0, 0.1);
 
 }
+#forgotPasswordLink {
+    font-size: 14px;
+    display: inline-block;
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
+
+/* Styles from PDF for Google Calendar Integration */
+.google-calendar-section {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.calendar-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.calendar-btn {
+    padding: 8px 16px;
+    background-color: #4285f4; /* Google Blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.calendar-btn:hover:not(:disabled) {
+    background-color: #3367d6;
+}
+
+.calendar-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Individual task reminder button in task list */
+.calendar-reminder-btn {
+    background-color: #34a853; /* Google Green */
+    color: white; /* Ensure icon is visible */
+    font-size: 12px; /* Adjust if icon size is different */
+    padding: 4px 8px; /* Adjust for icon */
+    margin-left: 5px; /* Spacing from other buttons */
+    border: none;
+    border-radius: 50%; /* Make it circular if desired */
+    width: 32px; /* Match other action buttons if circular */
+    height: 32px; /* Match other action buttons if circular */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-reminder-btn:hover:not(:disabled) {
+    background-color: #2d8a47;
+}
+
+.calendar-reminder-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
