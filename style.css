@@ -376,6 +376,9 @@ button.logout:hover {
 .calendar-header h3 {
     margin: 0;
     font-size: 18px;
+    color: #fff;
+    font-weight: normal;
+    border: none;
 }
 .weekdays {
     display: grid;
@@ -929,3 +932,53 @@ ul.styled-list {
 #globalReminderModal select {
     margin-bottom: 12px;
 }
+/* ===== ESTILOS DEL FOOTER ===== */
+.app-footer {
+    text-align: center;
+    padding: 25px 20px; /* Más padding vertical */
+    margin-top: 40px;   /* Espacio respecto al contenido superior */
+    background-color: #f8f9fa; /* Un color de fondo suave, similar al de .command-help o .section-header */
+    border-top: 1px solid #e0e0e0; /* Un borde superior sutil */
+    width: 100%; /* Asegura que ocupe todo el ancho disponible */
+    box-sizing: border-box; /* Para que el padding y borde no aumenten el ancho total */
+    clear: both; /* En caso de que haya elementos flotantes antes */
+}
+
+.footer-content {
+    max-width: 800px; /* Para que coincida con el max-width del body y .container */
+    margin: 0 auto;   /* Centrar el contenido del footer */
+}
+
+.app-footer .footer-links {
+    margin-bottom: 10px;
+}
+
+.app-footer .footer-links a {
+    color: #2196F3; /* Azul de tus botones secundarios, bueno para enlaces */
+    text-decoration: none;
+    margin: 0 8px;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.app-footer .footer-links a:hover {
+    color: #1976D2; /* Un azul más oscuro al pasar el mouse */
+    text-decoration: underline;
+}
+
+.app-footer .copyright-text {
+    color: #6c757d; /* Un gris suave para el texto de copyright */
+    font-size: 0.85em;
+    margin: 0;
+}
+
+/* Opcional: Estilos para el logo en el footer si decides usarlo */
+.app-footer .footer-logo {
+    max-height: 30px; /* Ajusta el tamaño según necesites */
+    margin-top: 10px;
+    opacity: 0.7;
+}
+
+/* Ajuste para que el footer no se superponga con el contenido principal si el body tiene max-width */
+/* Esto ya debería estar cubierto por el max-width en .footer-content y el box-sizing en .app-footer */
+/* pero es bueno tenerlo en cuenta. El body ya tiene max-width: 800px y margin: 0 auto. */
