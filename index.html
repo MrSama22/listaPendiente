@@ -19,7 +19,6 @@
         <input id="password" type="password" placeholder="Contraseña" required>
     </div>
 
-    <!-- NUEVO: Enlace de contraseña olvidada -->
     <div class="form-group">
         <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu contraseña?</a>
     </div>
@@ -99,6 +98,17 @@
 
         
         <p class="tittle">LISTA DE TAREAS</p>
+        <div class="google-calendar-section">
+            <h4>🗓️ Integración Google Calendar</h4>
+            <div class="calendar-controls">
+                <button id="connectGoogleBtn" class="calendar-btn">
+                    📅 Conectar Google Calendar
+                </button>
+                <button id="globalReminderBtn" class="calendar-btn" disabled>
+                    🔔 Crear Recordatorio Global
+                </button>
+            </div>
+        </div>
         <div class="completed-tasks-controls">
             <div class="form-group">
                 <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
@@ -177,6 +187,7 @@
 
     <script type="module" src="script.js"></script>
 
-    
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
 </body>
 </html>
