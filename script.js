@@ -25,8 +25,8 @@ const logoutBtn = document.getElementById('logoutBtn');
 
 // ---- Google Calendar Configuration ----
 const GOOGLE_CONFIG = {
-    CLIENT_ID: 'TU_CLIENT_ID_AQUI', // Reemplaza con tu Client ID
-    API_KEY: 'TU_API_KEY_AQUI', // Opcional, para requests sin autenticación
+    CLIENT_ID: '66598008920-q6ggm6hm90tmbfi24t3cg86r8eb2uuh6.apps.googleusercontent.com',
+    API_KEY: 'AIzaSyBcyOKrXJF1ShqKMri2PENPIkkShj8BI_8',
     DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
     SCOPES: 'https://www.googleapis.com/auth/calendar'
 };
