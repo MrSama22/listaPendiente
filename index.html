@@ -32,7 +32,10 @@
     <div id="appBox" class="container" style="display:none">
         <div class="header-container">
             <h2>Gestor de Tareas</h2>
-            <button id="logoutBtn" class="logout">Cerrar Sesión</button>
+            <div>
+                <button id="settingsBtn" class="settings-icon-btn" title="Configuración">⚙️</button>
+                <button id="logoutBtn" class="logout">Cerrar Sesión</button>
+            </div>
         </div>
 
         <div class="command-help">
@@ -72,12 +75,12 @@
         <div class="form-group">
             <label for="commandInput">Comando rápido:</label>
             <div class="command-input-group">
-                <input type="text" id="commandInput" class="command-input" 
+                <input type="text" id="commandInput" class="command-input"
                     placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana">
                 <button class="add-task-button">Añadir tarea</button>
             </div>
         </div>
-        
+
         <p class="opciones">Opción 2</p>
         <div class="form-group">
             <label for="taskName">Nombre de la tarea:</label>
@@ -96,32 +99,13 @@
 
         <button class="add-task">Añadir Tarea</button>
 
-        
+
         <p class="tittle">LISTA DE TAREAS</p>
-        <div class="google-calendar-section">
-            <h4>🗓️ Integración Google Calendar</h4>
-            <div class="calendar-controls">
-                <button id="connectGoogleBtn" class="calendar-btn">
-                    📅 Conectar Google Calendar
-                </button>
-                <button class="calendar-btn" onclick="openGlobalReminderModal()" id="globalReminderBtn" disabled>
-                    🔔 Crear Recordatorio Global Personalizado
-                </button>
-                
-            </div>
-        </div>
+
         <div class="completed-tasks-controls">
-            <div class="form-group">
-                <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
-                <select id="autoDeleteFrequency">
-                    <option value="never" selected>Nunca</option>
-                    <option value="daily">Día</option>
-                    <option value="weekly">Semana</option>
-                    <option value="monthly">Mes</option>
-                </select>
-            </div>
             <button id="deleteCompletedBtn" class="danger-btn" disabled>Eliminar Todas Las Tareas Completadas</button>
         </div>
+
         <div class="task-list">
             <h3 class="section-header">Tareas Completadas:</h3>
             <div id="completedTasks"></div>
@@ -158,9 +142,76 @@
         </div>
     </div>
 
+    <div id="settingsPage" class="container settings-page-container" style="display:none;">
+        <div class="settings-header">
+            <h2>Configuración</h2>
+            <button id="closeSettingsBtn" class="secondary">Volver a Tareas</button>
+        </div>
+        <div class="settings-main-content">
+            <div class="settings-sidebar">
+                <a href="#" data-target="settingsGoogleCalendarSection" class="active">📅 Calendario Google</a>
+                <a href="#" data-target="settingsTaskCleanupSection">🗑️ Limpieza de Tareas</a>
+            </div>
+            <div class="settings-content">
+                <div id="settingsGoogleCalendarSection" class="settings-section">
+                    <h3>Integración Google Calendar</h3>
+                    <div class="google-calendar-section-content">
+                        <div class="calendar-controls">
+                            <button id="connectGoogleBtn" class="calendar-btn">
+                                📅 Conectar Google Calendar
+                            </button>
+                        </div>
+                         <p class="settings-description">Conecta tu cuenta de Google Calendar para sincronizar tareas y crear recordatorios.</p>
+                    </div>
+
+                    <hr style="margin: 25px 0;">
+
+                    <h4>Mis Recordatorios Globales</h4>
+                    <div id="globalRemindersListContainer">
+                        <p id="noGlobalRemindersMsg" style="display: none;">No has creado recordatorios globales personalizados.</p>
+                        <ul id="globalRemindersList" class="styled-list">
+                            </ul>
+                    </div>
+                    <button id="addNewGlobalReminderBtn" class="calendar-btn" style="margin-top: 15px;" disabled>
+                        ➕ Crear Nuevo Recordatorio Global
+                    </button>
+                    <p class="settings-description">Crea recordatorios generales en tu Google Calendar para resúmenes de tareas o eventos importantes. Puedes editarlos o eliminarlos desde esta lista.</p>
+
+                    <hr style="margin: 25px 0;">
+
+                    <h4>Mis Recordatorios de Tareas</h4>
+                    <div id="individualTaskRemindersListContainer">
+                        <p id="noIndividualTaskRemindersMsg" style="display: none;">No hay recordatorios de tareas individuales o no estás conectado a Google Calendar.</p>
+                        <ul id="individualTaskRemindersList" class="styled-list">
+                        </ul>
+                    </div>
+                    <p class="settings-description">Estos son los recordatorios específicos para tus tareas que están en Google Calendar. Puedes editarlos o eliminarlos desde aquí.</p>
+
+                </div>
+
+                <div id="settingsTaskCleanupSection" class="settings-section" style="display:none;">
+                    <h3>Opciones de Limpieza de Tareas</h3>
+                    <div class="task-cleanup-section-content">
+                        <div class="form-group">
+                            <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
+                            <select id="autoDeleteFrequency">
+                                <option value="never" selected>Nunca</option>
+                                <option value="daily">Día</option>
+                                <option value="weekly">Semana</option>
+                                <option value="monthly">Mes</option>
+                            </select>
+                        </div>
+                        <p class="settings-description">Configura la frecuencia con la que las tareas completadas se eliminarán automáticamente. La eliminación manual de todas las tareas completadas se encuentra en la página principal.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <div id="editModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <span class="close-btn">&times;</span>
             <h3>Editar Tarea</h3>
             <div class="form-group">
                 <label for="editTaskName">Nombre de la tarea:</label>
@@ -182,39 +233,40 @@
         </div>
     </div>
 
-    <!-- Modal para recordatorio global -->
-<div class="modal" id="globalReminderModal" style="display:none">
-    <div class="modal-content">
-        <span class="close" onclick="document.getElementById('globalReminderModal').style.display='none'">&times;</span>
-        <h3>Crear Recordatorio Global Personalizado</h3>
-        <label>Fecha y hora:</label>
-        <input type="datetime-local" id="globalReminderDateTime">
+    <div class="modal" id="globalReminderModal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="globalReminderModalTitle">Crear Recordatorio Global</h3>
+            <input type="hidden" id="editingGlobalEventId" value="">
 
-        <label>Repetición:</label>
-        <select id="globalReminderRepeat">
-            <option value="none">Ninguna</option>
-            <option value="daily">Diaria</option>
-            <option value="weekly">Semanal</option>
-            <option value="monthly">Mensual</option>
-        </select>
+            <label for="globalReminderSummary">Título del Recordatorio:</label>
+            <input type="text" id="globalReminderSummary" placeholder="Ej: Revisar Tareas Pendientes">
 
-        <div style="display: flex; gap: 10px;">
-            <button onclick="handleCustomGlobalReminder()">Crear</button>
-            <button onclick="showEditGlobalReminderModal()">Editar Último</button>
-          </div>
+            <label for="globalReminderDateTime">Fecha y hora:</label>
+            <input type="datetime-local" id="globalReminderDateTime">
+
+            <label for="globalReminderRepeat">Repetición:</label>
+            <select id="globalReminderRepeat">
+                <option value="none">Ninguna</option>
+                <option value="daily">Diaria</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensual</option>
+            </select>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="saveGlobalReminderBtn">Guardar Recordatorio</button>
+                <button type="button" class="secondary close-btn-modal">Cancelar</button> </div>
+        </div>
     </div>
-</div>
 
 
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
-    <script type="module" src="script.js"></script>
-
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
+    <script type="module" src="script.js"></script>
 
-    
 </body>
 </html>
