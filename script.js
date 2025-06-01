@@ -23,6 +23,265 @@ const loginBtn = document.getElementById('loginBtn');
 const registerBtn = document.getElementById('registerBtn');
 const logoutBtn = document.getElementById('logoutBtn');
 
+// ---- Google Calendar Configuration ----
+const GOOGLE_CONFIG = {
+    CLIENT_ID: 'TU_CLIENT_ID_AQUI', // Reemplaza con tu Client ID
+    API_KEY: 'TU_API_KEY_AQUI', // Opcional, para requests sin autenticación
+    DISCOVERY_DOC: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+    SCOPES: 'https://www.googleapis.com/auth/calendar'
+};
+
+let gapi;
+let google;
+let isGoogleCalendarSignedIn = false;
+
+// ---- Google Calendar Functions ----
+async function initializeGoogleCalendar() {
+    try {
+        if (window.gapi) {
+            gapi = window.gapi;
+        } else {
+            console.error("GAPI client (gapi) not loaded.");
+            throw new Error("GAPI client (gapi) not loaded.");
+        }
+        if (window.google) {
+            google = window.google;
+        } else {
+            console.error("Google Identity Services (google) not loaded.");
+            throw new Error("Google Identity Services (google) not loaded.");
+        }
+
+        await new Promise((resolve, reject) => {
+            gapi.load('client', { 
+                callback: resolve,
+                onerror: reject,
+                timeout: 5000, 
+                ontimeout: () => reject(new Error('GAPI client load timeout'))
+            });
+        });
+
+        await gapi.client.init({
+            discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC]
+        });
+        
+        if (google.accounts && google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                callback: handleGoogleSignIn 
+            });
+        } else {
+            console.warn('Google Identity Services (GIS) not fully available for id.initialize.');
+        }
+        
+        console.log('Google Calendar API integration initialized.');
+        updateCalendarButtons(); 
+
+    } catch (error) {
+        console.error('Error initializing Google Calendar:', error);
+        const connectGoogleBtn = document.getElementById('connectGoogleBtn');
+        if (connectGoogleBtn) connectGoogleBtn.disabled = true;
+        const globalReminderBtn = document.getElementById('globalReminderBtn');
+        if (globalReminderBtn) globalReminderBtn.disabled = true;
+        document.querySelectorAll('.calendar-reminder-btn').forEach(btn => btn.disabled = true);
+        alert('Could not initialize Google Calendar integration. Features will be disabled.');
+    }
+}
+
+function handleGoogleSignIn(response) { 
+    console.log('Google Sign-In response (GIS callback):', response);
+    // This callback is for GIS initiated sign-ins (e.g. OneTap or Sign In with Google button).
+    // The main API authorization and token setting is handled by signInToGoogle.
+    // If this callback implies a user is signed in AND has granted calendar scopes,
+    // `isGoogleCalendarSignedIn` could be set to true and token set for gapi.client.
+    // For now, main connection logic is in `signInToGoogle`.
+}
+
+function signInToGoogle() { 
+    if (!google || !google.accounts || !google.accounts.oauth2) {
+        console.error("Google Identity Services (for token client) not loaded.");
+        alert("Error: Google connection library not loaded.");
+        return;
+    }
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CONFIG.CLIENT_ID,
+        scope: GOOGLE_CONFIG.SCOPES,
+        callback: (tokenResponse) => { 
+            if (tokenResponse && tokenResponse.access_token) {
+                gapi.client.setToken(tokenResponse); 
+                isGoogleCalendarSignedIn = true;
+                updateCalendarButtons();
+                alert('Conectado a Google Calendar exitosamente!'); 
+            } else {
+                console.error('Google sign-in failed or access token not received:', tokenResponse);
+                isGoogleCalendarSignedIn = false; 
+                updateCalendarButtons();
+                alert('Error al conectar con Google Calendar. No se recibió el token de acceso.');
+            }
+        },
+        error_callback: (error) => { 
+            console.error('Google sign-in error:', error);
+            isGoogleCalendarSignedIn = false;
+            updateCalendarButtons();
+            alert(`Error al conectar con Google Calendar: ${error.message || 'Error desconocido.'}`);
+        }
+    });
+    tokenClient.requestAccessToken();
+}
+
+function updateCalendarButtons() {
+    const connectGoogleBtn = document.getElementById('connectGoogleBtn');
+    const globalReminderBtn = document.getElementById('globalReminderBtn');
+
+    if (connectGoogleBtn) {
+        connectGoogleBtn.disabled = isGoogleCalendarSignedIn;
+    }
+    if (globalReminderBtn) {
+        globalReminderBtn.disabled = !isGoogleCalendarSignedIn;
+    }
+
+    document.querySelectorAll('.calendar-reminder-btn').forEach(btn => {
+        btn.disabled = !isGoogleCalendarSignedIn;
+    });
+}
+
+async function createGoogleCalendarEvent(task, reminderMinutes = 15) {
+    if (!isGoogleCalendarSignedIn) { 
+        alert('Primero debes conectarte a Google Calendar.');
+        return;
+    }
+    if (task.dueDate === 'indefinido' || !task.dueDate) {
+        alert('No se puede crear un recordatorio para tareas sin fecha definida.');
+        return;
+    }
+
+    try {
+        const dueDate = new Date(task.dueDate);
+        const reminderTime = new Date(dueDate.getTime() - (reminderMinutes * 60 * 1000)); 
+        const eventEndTime = new Date(reminderTime.getTime() + (15 * 60 * 1000)); 
+
+        const event = {
+            summary: `Recordatorio: ${task.name}`, 
+            description: `Tarea creada en Gestor de Tareas.\n\nNombre: ${task.name}\nFecha límite: ${formatDate(task.dueDate)}`, 
+            start: {
+                dateTime: reminderTime.toISOString(),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            },
+            end: {
+                dateTime: eventEndTime.toISOString(), 
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            },
+            reminders: {
+                useDefault: false,
+                overrides: [ 
+                    { method: 'popup', minutes: 0 }, 
+                    { method: 'email', minutes: 0 }  
+                ]
+            },
+            colorId: '4' // Blue
+        };
+
+        const response = await gapi.client.calendar.events.insert({
+            calendarId: 'primary',
+            resource: event
+        });
+        
+        console.log('Evento creado:', response);
+        alert(`Recordatorio creado en Google Calendar para "${task.name}".`);
+
+        if (tasksCol && response.result && response.result.id) { 
+            await updateTaskDB(task.id, { googleCalendarEventId: response.result.id });
+        }
+        return response.result.id;
+
+    } catch (error) {
+        console.error('Error creando evento en Google Calendar:', error);
+        let errorMessage = 'Error al crear el recordatorio en Google Calendar.';
+        if (error.result && error.result.error && error.result.error.message) {
+            errorMessage += ` Detalles: ${error.result.error.message}`;
+        }
+        alert(errorMessage);
+    }
+}
+
+async function createGlobalReminder() {
+    if (!isGoogleCalendarSignedIn) { 
+        alert('Primero debes conectarte a Google Calendar.');
+        return;
+    }
+
+    const pendingTasks = tasks.filter(t => !t.completed && t.dueDate !== 'indefinido' && t.dueDate); 
+
+    if (pendingTasks.length === 0) { 
+        alert('No hay tareas pendientes con fecha para crear recordatorio global.');
+        return;
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0); 
+
+    const eventDurationMinutes = 30; 
+    const eventEndTime = new Date(tomorrow.getTime() + (eventDurationMinutes * 60 * 1000));
+
+    let tasksList = pendingTasks.map(task => 
+        `- ${task.name} (Para: ${formatDate(task.dueDate)})`
+    ).join('\n');
+
+    const event = {
+        summary: `Recordatorio Global: ${pendingTasks.length} tarea(s) pendiente(s)`, 
+        description: `Resumen de tareas pendientes:\n\n${tasksList}\n\n--- Generado por Gestor de Tareas ---`, 
+        start: {
+            dateTime: tomorrow.toISOString(),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        end: { 
+            dateTime: eventEndTime.toISOString(),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        },
+        reminders: {
+            useDefault: false,
+            overrides: [ 
+                { method: 'popup', minutes: 0 }, 
+                { method: 'email', minutes: 0 }  
+            ]
+        },
+        colorId: '11' // Red
+    };
+
+    try {
+        const response = await gapi.client.calendar.events.insert({
+            calendarId: 'primary',
+            resource: event
+        });
+        console.log('Recordatorio global creado:', response);
+        alert(`Recordatorio global creado para mañana a las 9:00 AM con ${pendingTasks.length} tarea(s).`); 
+    } catch (error) {
+        console.error('Error creando recordatorio global:', error);
+        let errorMessage = 'Error al crear el recordatorio global.';
+        if (error.result && error.result.error && error.result.error.message) {
+            errorMessage += ` Detalles: ${error.result.error.message}`;
+        }
+        alert(errorMessage);
+    }
+}
+
+async function deleteGoogleCalendarEvent(eventId) {
+    if (!isGoogleCalendarSignedIn || !eventId) { 
+        return;
+    }
+    try {
+        await gapi.client.calendar.events.delete({
+            calendarId: 'primary',
+            eventId: eventId
+        });
+        console.log('Evento eliminado de Google Calendar:', eventId);
+    } catch (error) {
+        console.error('Error eliminando evento de Google Calendar:', error); 
+    }
+}
+// ---- Google Calendar Functions ---- END
+
+
 // ---- 2. Event Listeners Iniciales ----
 document.addEventListener('DOMContentLoaded', () => {
     // Listeners para autenticación
@@ -96,24 +355,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // olvidar cobtraseña
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-if (forgotPasswordLink) {
-    forgotPasswordLink.addEventListener('click', () => {
-        const email = emailInput.value;
-        if (!email) {
-            alert("Por favor, ingresa tu correo electrónico primero.");
-            return;
-        }
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', () => {
+            const email = emailInput.value;
+            if (!email) {
+                alert("Por favor, ingresa tu correo electrónico primero.");
+                return;
+            }
 
-        auth.sendPasswordResetEmail(email)
-            .then(() => {
-                alert("Se ha enviado un correo para restablecer tu contraseña.");
-            })
-            .catch(err => {
-                alert("Error al enviar el correo de restablecimiento: " + err.message);
-            });
-    });
-}
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    alert("Se ha enviado un correo para restablecer tu contraseña.");
+                })
+                .catch(err => {
+                    alert("Error al enviar el correo de restablecimiento: " + err.message);
+                });
+        });
+    }
 
+    // Initialize Google Calendar integration
+    initializeGoogleCalendar(); 
+
+    // Event Listeners para Google Calendar buttons
+    const connectGoogleBtn = document.getElementById('connectGoogleBtn');
+    if (connectGoogleBtn) {
+        connectGoogleBtn.addEventListener('click', signInToGoogle);
+    }
+    const globalReminderBtn = document.getElementById('globalReminderBtn');
+    if (globalReminderBtn) {
+        globalReminderBtn.addEventListener('click', createGlobalReminder);
+    }
 });
 
 // Modal: cerrar con la X, fuera del modal o con ESC
@@ -158,6 +429,18 @@ document.addEventListener('click', function(event) {
     event.stopPropagation();
     return;
     }
+
+    // Added handler for calendar-reminder-btn
+    if (target.closest('.calendar-reminder-btn')) {
+        const taskId = target.closest('.calendar-reminder-btn').dataset.id;
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+            createGoogleCalendarEvent(task);
+        }
+        event.stopPropagation();
+        return;
+    }
+
     if (!target.closest('.task-item')) {
     if (selectedTaskId !== null) {
     selectedTaskId = null;
@@ -171,22 +454,24 @@ auth.onAuthStateChanged(user => {
     if (user) {
         authBox.style.display = 'none';
         appBox.style.display = 'block';
-        initTaskListeners(user.uid); // Esto inicializa tasksCol y el listener de tareas
+        initTaskListeners(user.uid); 
     } else {
         appBox.style.display = 'none';
         authBox.style.display = 'block';
         if (typeof unsubscribe === 'function') {
-            unsubscribe(); // Detener el listener de Firestore al cerrar sesión
-            unsubscribe = null; // Resetear la variable
+            unsubscribe(); 
+            unsubscribe = null; 
         }
-        tasks = []; // Limpiar tareas locales
-        renderTasks(); // Actualizar UI para mostrar listas vacías
-        renderCalendar(); // Actualizar calendario
+        tasks = []; 
+        renderTasks(); 
+        renderCalendar(); 
         const deleteCompletedBtn = document.getElementById('deleteCompletedBtn');
         if (deleteCompletedBtn) deleteCompletedBtn.disabled = true;
         const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
         if (autoDeleteFrequencySelect) autoDeleteFrequencySelect.value = 'never';
-
+        
+        isGoogleCalendarSignedIn = false; // Reset on logout
+        updateCalendarButtons(); // Update buttons state on logout
     }
 });
 
@@ -197,7 +482,7 @@ let currentEditingTaskId = null;
 let selectedTaskId = null;
 
 function initTaskListeners(uid) {
-    if (unsubscribe) { // Si ya existe un listener, detenerlo antes de crear uno nuevo
+    if (unsubscribe) { 
         unsubscribe();
     }
     tasksCol = db.collection('users').doc(uid).collection('tasks');
@@ -225,7 +510,6 @@ const addTaskDB = task => tasksCol.add(task);
 const updateTaskDB = (id, data) => tasksCol.doc(id).update(data);
 const deleteTaskDB = id => tasksCol.doc(id).delete();
 
-// Helper function para borrar múltiples tareas usando batch
 async function deleteMultipleTasksByIds(taskIds) {
     if (!taskIds || taskIds.length === 0 || !tasksCol) return;
     const batch = db.batch();
@@ -339,29 +623,29 @@ function parseDateText(dateText) {
 
     let weekOffset = dateText.includes('próxima semana') ? 1 : 0;
 
-    for (let day in daysOfWeek) {
-    if (dateText.includes(day)) {
-    let targetDate = new Date(today);
-    let currentDay = today.getDay();
-    let targetDay = daysOfWeek[day];
-    let daysToAdd = targetDay - currentDay;
+    for (let dayName in daysOfWeek) { // Changed `day` to `dayName` to avoid conflict
+        if (dateText.includes(dayName)) {
+            let targetDate = new Date(today);
+            let currentDay = today.getDay();
+            let targetDay = daysOfWeek[dayName];
+            let daysToAdd = targetDay - currentDay;
 
-    if (daysToAdd <= 0 && !dateText.includes('esta semana')) daysToAdd += 7; // Si es un día pasado Y NO es "esta semana", ir a la siguiente.
-    else if (daysToAdd < 0 && dateText.includes('esta semana')) return null; // Ej: "lunes de esta semana" y hoy es miércoles.
+            if (daysToAdd <= 0 && !dateText.includes('esta semana')) daysToAdd += 7; 
+            else if (daysToAdd < 0 && dateText.includes('esta semana')) return null; 
 
-    daysToAdd += weekOffset * 7;
+            daysToAdd += weekOffset * 7;
 
-    targetDate.setDate(today.getDate() + daysToAdd);
-    targetDate.setSeconds(0, 0);
+            targetDate.setDate(today.getDate() + daysToAdd);
+            targetDate.setSeconds(0, 0);
 
-    const horaMatch = dateText.match(/a las (\d{1,2}):(\d{2})/);
-    if (horaMatch) {
-    targetDate.setHours(parseInt(horaMatch[1]), parseInt(horaMatch[2]), 0, 0);
-    } else {
-    targetDate.setHours(23, 59, 0, 0);
-    }
-    return targetDate;
-    }
+            const horaMatch = dateText.match(/a las (\d{1,2}):(\d{2})/);
+            if (horaMatch) {
+                targetDate.setHours(parseInt(horaMatch[1]), parseInt(horaMatch[2]), 0, 0);
+            } else {
+                targetDate.setHours(23, 59, 0, 0);
+            }
+            return targetDate;
+        }
     }
     return null;
 }
@@ -379,35 +663,35 @@ function showEditModal(taskId) {
 
     taskNameInput.value = task.name;
 
-    if (task.dueDate !== 'indefinido') {
-    const date = new Date(task.dueDate);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    dateInput.value = `${year}-${month}-${day}`;
+    if (task.dueDate !== 'indefinido' && task.dueDate) {
+        const date = new Date(task.dueDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`;
 
-    const hasSpecificTime = date.getHours() !== 23 || date.getMinutes() !== 59;
-    includeTimeCheckbox.checked = hasSpecificTime;
+        const hasSpecificTime = date.getHours() !== 23 || date.getMinutes() !== 59;
+        includeTimeCheckbox.checked = hasSpecificTime;
 
-    if (hasSpecificTime) {
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    timeInput.value = `${hours}:${minutes}`;
-    timeInputContainer.style.display = 'block';
+        if (hasSpecificTime) {
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            timeInput.value = `${hours}:${minutes}`;
+            timeInputContainer.style.display = 'block';
+        } else {
+            timeInput.value = '';
+            timeInputContainer.style.display = 'none';
+        }
     } else {
-    timeInput.value = '';
-    timeInputContainer.style.display = 'none';
-    }
-    } else {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    dateInput.value = `${year}-${month}-${day}`;
-    
-    timeInput.value = '';
-    includeTimeCheckbox.checked = false;
-    timeInputContainer.style.display = 'none';
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${year}-${month}-${day}`; // Default to today if no date
+        
+        timeInput.value = '';
+        includeTimeCheckbox.checked = false;
+        timeInputContainer.style.display = 'none';
     }
 
     modal.style.display = 'block';
@@ -442,6 +726,9 @@ function saveEditedTask() {
     updateTaskDB(currentEditingTaskId, {
     name: taskNameInput.value.trim(),
     dueDate: dueDate
+    }).catch(error => { // Added error handling
+        console.error("Error updating task:", error);
+        alert("Error al actualizar la tarea.");
     });
 
     closeModal();
@@ -467,12 +754,6 @@ function addTask() {
     if (taskTime) {
     const [hours, minutes] = taskTime.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
-
-    // const now = new Date(); // Commented out as per original, re-evaluate if needed
-    // if (newDate < now) {
-    // alert('No puedes establecer una fecha y hora anterior a la actual');
-    // return;
-    // }
     } else {
     newDate.setHours(23, 59, 0, 0);
     }
@@ -484,6 +765,9 @@ function addTask() {
     dueDate: dueDate,
     completed: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(error => { // Added error handling
+        console.error("Error adding task:", error);
+        alert("Error al añadir la tarea.");
     });
     clearForm();
 }
@@ -491,13 +775,25 @@ function addTask() {
 function toggleTaskStatus(taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
-    updateTaskDB(taskId, { completed: !task.completed });
+    updateTaskDB(taskId, { completed: !task.completed }).catch(error => {
+        console.error("Error toggling task status:", error);
+        alert("Error al cambiar el estado de la tarea.");
+    });
     }
 }
 
 function deleteTask(taskId) {
     if (confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
-    deleteTaskDB(taskId);
+        const task = tasks.find(t => t.id === taskId); 
+        
+        if (task && task.googleCalendarEventId) {
+            deleteGoogleCalendarEvent(task.googleCalendarEventId); 
+        }
+        
+        deleteTaskDB(taskId).catch(error => { 
+            console.error("Error deleting task from DB:", error);
+            alert("Error al eliminar la tarea de la base de datos.");
+        });
     }
 }
 
@@ -509,7 +805,7 @@ function isToday(date) {
 }
 
 function getRemainingDays(dueDate) {
-    if (dueDate === 'indefinido') return 'Indefinido';
+    if (dueDate === 'indefinido' || !dueDate) return 'Indefinido';
 
     const now = new Date();
     const due = new Date(dueDate);
@@ -540,7 +836,7 @@ function getRemainingDays(dueDate) {
 }
 
 function formatDate(dateString) {
-    if (dateString === 'indefinido') return 'indefinido';
+    if (dateString === 'indefinido' || !dateString) return 'indefinido';
 
     const date = new Date(dateString);
     const options = {
@@ -567,30 +863,36 @@ function createTaskElement(task) {
     taskElement.tabIndex = 0;
     taskElement.dataset.id = task.id;
 
-    const remainingDays = !task.completed && task.dueDate !== 'indefinido'
-    ? `| ⏱️ ${getRemainingDays(task.dueDate)}`
-    : '';
+    const remainingDays = !task.completed && task.dueDate !== 'indefinido' && task.dueDate
+        ? `| ⏱️ ${getRemainingDays(task.dueDate)}`
+        : '';
+
+    const reminderButton = (!task.completed && task.dueDate !== 'indefinido' && task.dueDate)
+        ? `<button class="calendar-reminder-btn" data-id="${task.id}" title="Crear recordatorio en Google Calendar" ${isGoogleCalendarSignedIn ? '' : 'disabled'}>🔔</button>`
+        : '';
 
     taskElement.innerHTML = `
-    <div class="task-info">
-    ${task.name} | 📅 ${formatDate(task.dueDate)} ${remainingDays} |
-    </div>
-    <div class="task-actions">
-    <button class="edit-button" data-id="${task.id}" title="Editar">✏️</button>
-    <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">
-    ${task.completed ? '❌' : '✅'}
-    </button>
-    <button class="delete-button" data-id="${task.id}" title="Eliminar">🗑️</button>
-    </div>
+        <div class="task-info">
+            ${task.name} | 📅 ${formatDate(task.dueDate)} ${remainingDays}
+        </div>
+        <div class="task-actions">
+            <button class="edit-button" data-id="${task.id}" title="Editar">✏️</button>
+            <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como pendiente' : 'Marcar como completada'}">
+                ${task.completed ? '❌' : '✅'}
+            </button>
+            <button class="delete-button" data-id="${task.id}" title="Eliminar">🗑️</button>
+            ${reminderButton}
+        </div>
     `;
 
     taskElement.addEventListener('click', function(e) {
     if (
-    e.target.classList.contains('edit-button') ||
-    e.target.classList.contains('toggle-status-button') ||
-    e.target.classList.contains('delete-button')
+        e.target.closest('.edit-button') || 
+        e.target.closest('.toggle-status-button') ||
+        e.target.closest('.delete-button') ||
+        e.target.closest('.calendar-reminder-btn') 
     ) {
-    return;
+        return;
     }
     selectedTaskId = task.id === selectedTaskId ? null : task.id;
     renderTasks();
@@ -598,11 +900,11 @@ function createTaskElement(task) {
 
     let pressTimer;
     taskElement.addEventListener('mousedown', function(e) {
-        if ( e.target.classList.contains('edit-button') || e.target.classList.contains('toggle-status-button') || e.target.classList.contains('delete-button') ) return;
+        if ( e.target.closest('.edit-button') || e.target.closest('.toggle-status-button') || e.target.closest('.delete-button') || e.target.closest('.calendar-reminder-btn') ) return;
         pressTimer = setTimeout(() => handleLongPress(task), 500);
     });
     taskElement.addEventListener('touchstart', function(e) {
-        if ( e.target.classList.contains('edit-button') || e.target.classList.contains('toggle-status-button') || e.target.classList.contains('delete-button') ) return;
+        if ( e.target.closest('.edit-button') || e.target.closest('.toggle-status-button') || e.target.closest('.delete-button') || e.target.closest('.calendar-reminder-btn') ) return;
         pressTimer = setTimeout(() => handleLongPress(task), 500);
     });
     ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => 
@@ -612,7 +914,7 @@ function createTaskElement(task) {
 }
 
 function handleLongPress(task) {
-    if (task.dueDate === 'indefinido') return;
+    if (task.dueDate === 'indefinido' || !task.dueDate) return;
     const taskDate = new Date(task.dueDate);
     if (taskDate.getMonth() !== currentCalendarDate.getMonth() || taskDate.getFullYear() !== currentCalendarDate.getFullYear()) {
         currentCalendarDate = new Date(taskDate.getFullYear(), taskDate.getMonth(), 1);
@@ -640,8 +942,8 @@ function renderTasks() {
     const pendingTasks = tasks.filter(t => !t.completed);
     const completedTasksArray = tasks.filter(t => t.completed);
 
-    const undefinedPending = pendingTasks.filter(t => t.dueDate === 'indefinido');
-    const datedPending = pendingTasks.filter(t => t.dueDate !== 'indefinido');
+    const undefinedPending = pendingTasks.filter(t => t.dueDate === 'indefinido' || !t.dueDate);
+    const datedPending = pendingTasks.filter(t => t.dueDate !== 'indefinido' && t.dueDate);
 
     datedPending.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
@@ -670,6 +972,7 @@ function clearForm() {
     document.getElementById('taskName').value = '';
     document.getElementById('taskDate').value = '';
     document.getElementById('taskTime').value = '';
+    document.getElementById('commandInput').value = ''; // Also clear command input
 }
 
 // ---- 6. Funciones del Calendario ----
@@ -678,11 +981,11 @@ let currentCalendarDate = new Date();
 function initCalendar() {
     const now = new Date();
     currentCalendarDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    // renderCalendar(); // renderCalendar is called by onSnapshot now after first load
     const calendarContainer = document.querySelector('.calendar-container');
     if (calendarContainer) {
         calendarContainer.style.overflowX = 'auto';
     }
+     renderCalendar(); // Initial render moved here as it's specific to app calendar
 }
 
 function changeMonth(delta) {
@@ -746,9 +1049,10 @@ function renderCalendar() {
     }
     
     if (todayElement && today.getMonth() === month && today.getFullYear() === year) {
-    setTimeout(() => {
-    todayElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-    }, 100);
+        // Scroll into view if today is in current month, after a short delay for rendering
+        // setTimeout(() => {
+        //    todayElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        // }, 100); // This can be jumpy, consider alternatives if problematic
     }
 }
 
@@ -766,7 +1070,7 @@ function createCalendarDay(dayNum, isOtherMonth, isTodayFlag = false) {
 
 function addTasksToCalendarDay(dayEl, date) {
     const dayTasks = tasks.filter(task => {
-    if (task.completed || task.dueDate === 'indefinido') return false;
+    if (task.completed || task.dueDate === 'indefinido' || !task.dueDate) return false;
     const taskDate = new Date(task.dueDate);
     return taskDate.getDate() === date.getDate() && 
     taskDate.getMonth() === date.getMonth() && 
@@ -803,10 +1107,10 @@ function toggleTimeInput() {
 }
 
 // ---- Funciones para Borrar Tareas Completadas ----
-const USER_SETTINGS_KEY_PREFIX = 'taskManagerUserSettings_';
+const USER_SETTINGS_KEY_PREFIX = 'taskManagerUserSettings_'; // Unused variable?
 
 function saveUserSetting(userId, settingKey, value) {
-    if (!userId) return;
+    if (!userId) return Promise.reject("User ID not provided for saveUserSetting");
     return db.collection('users').doc(userId).collection('settings').doc('preferences').set({
         [settingKey]: value
     }, { merge: true }).catch(err => console.error("Error guardando configuración:", err));
@@ -839,7 +1143,6 @@ async function confirmThenDeleteCompletedTasks() {
         try {
             await deleteMultipleTasksByIds(idsToDelete);
             alert(`${idsToDelete.length} tarea(s) completada(s) han sido eliminada(s).`);
-            // renderTasks será llamado por onSnapshot
         } catch (error) {
             console.error("Error eliminando tareas completadas:", error);
             alert("Error al eliminar tareas completadas.");
@@ -854,7 +1157,7 @@ async function handleAutoDeleteFrequencyChange() {
     const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
     const frequency = autoDeleteFrequencySelect.value;
     await saveUserSetting(currentUser.uid, 'autoDeleteFrequency', frequency);
-    await saveUserSetting(currentUser.uid, 'lastAutoDeleteTimestamp', new Date().getTime()); // Resetear timestamp
+    await saveUserSetting(currentUser.uid, 'lastAutoDeleteTimestamp', new Date().getTime()); 
     alert('Configuración de borrado automático guardada.');
     checkAndPerformAutoDelete(currentUser.uid);
 }
@@ -865,7 +1168,7 @@ async function loadUserSettings(userId) {
     if (frequency && autoDeleteFrequencySelect) {
         autoDeleteFrequencySelect.value = frequency;
     } else if (autoDeleteFrequencySelect) {
-        autoDeleteFrequencySelect.value = 'never'; // Default
+        autoDeleteFrequencySelect.value = 'never'; 
     }
 }
 
@@ -891,7 +1194,7 @@ async function checkAndPerformAutoDelete(userId) {
     switch (frequency) {
         case 'daily': intervalMs = 24 * 60 * 60 * 1000; break;
         case 'weekly': intervalMs = 7 * 24 * 60 * 60 * 1000; break;
-        case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break;
+        case 'monthly': intervalMs = 30 * 24 * 60 * 60 * 1000; break; // Approx.
         default: return;
     }
 
@@ -901,11 +1204,13 @@ async function checkAndPerformAutoDelete(userId) {
             const idsToDelete = completedTasksToDelete.map(t => t.id);
             try {
                 await deleteMultipleTasksByIds(idsToDelete);
+                console.log(`Auto-deleted ${idsToDelete.length} completed tasks.`);
                 await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
             } catch (error) {
                 console.error("Error durante el borrado automático de tareas completadas:", error);
             }
         } else {
+            // No tasks to delete, but still update timestamp to avoid immediate re-check
             await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now);
         }
     }
