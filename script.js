@@ -225,10 +225,7 @@ async function createGoogleCalendarEvent(task, reminderMinutes = 15) {
     // This function is mostly called internally by confirmAndSaveIndividualTaskReminder,
     // which will itself be wrapped. If called directly, it should also be wrapped or ensure auth.
     // For now, assuming confirmAndSave... is the main entry point.
-    if (task.dueDate === 'indefinido' || !task.dueDate) {
-        alert('No se puede crear un recordatorio para tareas sin fecha definida.');
-        return;
-    }
+    
 
     const dueDate = new Date(task.dueDate);
     const reminderTime = new Date(dueDate.getTime() - (reminderMinutes * 60 * 1000));
@@ -1084,9 +1081,7 @@ document.addEventListener('click', function(event) {
              if (!isGoogleCalendarSignedIn && task.googleCalendarEventId) { // If not signed in BUT reminder exists
                 alert('Conéctate a Google Calendar para editar este recordatorio, o elimínalo.'); return;
             }
-            if (task.dueDate === 'indefinido' || !task.dueDate) {
-                alert('No se puede gestionar un recordatorio para tareas sin fecha definida.'); return;
-            }
+            
             editTaskReminder(task.id); // This function now handles new/edit logic better
         }
     } else if (!target.closest('.task-item') && !target.closest('.modal-content') && !target.closest('.settings-sidebar a') && !target.closest('.settings-icon-btn') && !target.closest('.settings-header button')) {
