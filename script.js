@@ -1463,25 +1463,48 @@ function initCalendar() {
 }
 function changeMonth(delta) { currentCalendarDate.setMonth(currentCalendarDate.getMonth()+delta); renderCalendar(); }
 function renderCalendar() {
-    const calEl=document.getElementById('calendar'), monthYrEl=document.getElementById('currentMonthYear');
-    if(!calEl || !monthYrEl) return;
-    const y=currentCalendarDate.getFullYear(), m=currentCalendarDate.getMonth();
-    const mNames=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-    monthYrEl.textContent=`${mNames[m]} ${y}`; calEl.innerHTML='';
-    const firstD=new Date(y,m,1); let startD=firstD.getDay(); if(startD===0)startD=7; startD--;
-    const lastD=new Date(y,m+1,0); const totalDs=lastD.getDate();
-    const prevMLastD=new Date(y,m,0).getDate();
-    for(let i=0;i<startD;i++) calEl.appendChild(createCalendarDay(prevMLastD-startD+i+1, true));
-    const today=new Date();
-    for(let i=1;i<=totalDs;i++){
-        const isTodayF=today.getDate()===i && today.getMonth()===m && today.getFullYear()===y;
-        const dayEl=createCalendarDay(i,false,isTodayF);
-        addTasksToCalendarDay(dayEl, new Date(y,m,i));
+    const calEl = document.getElementById('calendar');
+    const monthYrEl = document.getElementById('currentMonthYear');
+    if (!calEl || !monthYrEl) return;
+
+    const y = currentCalendarDate.getFullYear();
+    const m = currentCalendarDate.getMonth();
+    const mNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    monthYrEl.textContent = `${mNames[m]} ${y}`;
+    calEl.innerHTML = '';
+
+    const firstD = new Date(y, m, 1);
+    let startD = firstD.getDay();
+    if (startD === 0) startD = 7; // Ajuste para que lunes sea el primer día si getDay() devuelve 0 para domingo
+    startD--; // Lunes = 0, Martes = 1, ... Domingo = 6
+
+    const lastD = new Date(y, m + 1, 0);
+    const totalDs = lastD.getDate();
+    const prevMLastD = new Date(y, m, 0).getDate();
+
+    // Días del mes anterior
+    for (let i = 0; i < startD; i++) {
+        calEl.appendChild(createCalendarDay(prevMLastD - startD + i + 1, true));
+    }
+
+    // Días del mes actual
+    const today = new Date();
+    for (let i = 1; i <= totalDs; i++) {
+        const isTodayF = today.getDate() === i && today.getMonth() === m && today.getFullYear() === y;
+        const dayEl = createCalendarDay(i, false, isTodayF);
+        addTasksToCalendarDay(dayEl, new Date(y, m, i));
         calEl.appendChild(dayEl);
     }
+
+    // Días del mes siguiente
     const totalCellsSoFar = startD + totalDs;
     const nextMDs = (totalCellsSoFar % 7 === 0) ? 0 : 7 - (totalCellsSoFar % 7);
-    for(let i=1;i<=nextMDs;i++) calEl.appendChild(createCalendarDay(i,true));
+    for (let i = 1; i <= nextMDs; i++) {
+        calEl.appendChild(createCalendarDay(i, true));
+    }
+
+    // Llamar a la función de scroll después de renderizar el calendario
+    scrollToTodayOnMobile(); // <--- AÑADE ESTA LÍNEA AQUÍ
 }
 function createCalendarDay(dayN, isOtherM, isTodayF=false) {
     const el=document.createElement('div');
@@ -1514,7 +1537,24 @@ function toggleTimeInput() {
         timeInput.value = '';
     }
 }
-
+function scrollToTodayOnMobile() {
+    // Verifica si la pantalla coincide con tu media query para móviles (max-width: 800px)
+    if (window.matchMedia('(max-width: 800px)').matches) {
+        const todayElement = document.querySelector('.calendar-day.today');
+        if (todayElement) {
+            // Basado en tu style.css, el calendario tiene overflow-x: auto en móviles,
+            // lo que significa que el scroll principal es horizontal.
+            // 'inline: "center"' intentará centrar el día actual horizontalmente.
+            // 'block: "nearest"' asegura que sea visible verticalmente sin scroll innecesario.
+            todayElement.scrollIntoView({
+                behavior: 'smooth', // Para un desplazamiento suave
+                block: 'nearest',
+                inline: 'center'
+            });
+            console.log('Calendario desplazado al día actual en vista móvil.');
+        }
+    }
+}
 // ---- Funciones para Borrar Tareas Completadas y User Settings (Auto-delete) ----
 function saveUserSetting(userId, key, value) {
     if(!userId)return Promise.reject("No UID for saveUserSetting");
