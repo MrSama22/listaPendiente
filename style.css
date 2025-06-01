@@ -55,10 +55,7 @@ button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
-button.add-task {
-    width: 100%;
-    margin:0 0 10px 0;
-}
+
 .task-list {
     margin-top: 20px;
 }
@@ -639,6 +636,11 @@ button.danger-btn:disabled {
     .settings-sidebar{
         width: 90%;
         box-shadow: 0px 10px 15px gray;
+
+    button.add-task {
+        width: 100%;
+        margin:0 0 10px 0;
+}
 
     }
 }
