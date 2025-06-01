@@ -67,40 +67,42 @@ const closeModalBtn = document.querySelector('#editModal .close');
 function handleGoogleClientLoad() {
     gapi.load('client:auth2', initGoogleClient);
 }
-window.handleGoogleClientLoad = handleGoogleClientLoad; // Make it globally accessible
+// Keep this global, as gapi.load might still rely on it, or for consistency.
+window.handleGoogleClientLoad = handleGoogleClientLoad; //
 
-function initGoogleClient() {
-    gapi.client.init({
-        clientId: GOOGLE_CLIENT_ID,
-        discoveryDocs: DISCOVERY_DOCS,
-        scope: SCOPES
-    }).then(function () {
-        googleAuth = gapi.auth2.getAuthInstance();
-        isGoogleApiLoaded = true;
-        googleAuth.isSignedIn.listen(updateGoogleSigninStatus);
-        updateGoogleSigninStatus(googleAuth.isSignedIn.get());
+function initGoogleClient() { //
+    gapi.client.init({ //
+        clientId: GOOGLE_CLIENT_ID, //
+        discoveryDocs: DISCOVERY_DOCS, //
+        scope: SCOPES //
+    }).then(function () { //
+        googleAuth = gapi.auth2.getAuthInstance(); //
+        isGoogleApiLoaded = true; //
+        googleAuth.isSignedIn.listen(updateGoogleSigninStatus); //
+        updateGoogleSigninStatus(googleAuth.isSignedIn.get()); //
 
-        if (authorizeGoogleBtn) authorizeGoogleBtn.onclick = handleAuthorizeGoogleClick;
-        if (signoutGoogleBtn) signoutGoogleBtn.onclick = handleSignoutGoogleClick;
-    }).catch(function(error) {
-        console.error("Error initializing Google API client: ", JSON.stringify(error, null, 2));
-        alert("Error al conectar con Google Calendar. Revisa la consola.");
+        if (authorizeGoogleBtn) authorizeGoogleBtn.onclick = handleAuthorizeGoogleClick; //
+        if (signoutGoogleBtn) signoutGoogleBtn.onclick = handleSignoutGoogleClick; //
+    }).catch(function(error) { //
+        console.error("Error initializing Google API client: ", JSON.stringify(error, null, 2)); //
+        alert("Error al conectar con Google Calendar. Revisa la consola."); //
     });
 }
 
-function updateGoogleSigninStatus(isSignedIn) {
-    isGoogleUserSignedIn = isSignedIn;
-    if (authorizeGoogleBtn && signoutGoogleBtn) {
-        if (isSignedIn) {
-            authorizeGoogleBtn.style.display = 'none';
-            signoutGoogleBtn.style.display = 'inline-block';
-        } else {
-            authorizeGoogleBtn.style.display = 'inline-block';
-            signoutGoogleBtn.style.display = 'none';
+
+// ... (updateGoogleSigninStatus, handleAuthorizeGoogleClick, handleSignoutGoogleClick functions remain the same) ...
+function updateGoogleSigninStatus(isSignedIn) { //
+    isGoogleUserSignedIn = isSignedIn; //
+    if (authorizeGoogleBtn && signoutGoogleBtn) { //
+        if (isSignedIn) { //
+            authorizeGoogleBtn.style.display = 'none'; //
+            signoutGoogleBtn.style.display = 'inline-block'; //
+        } else { //
+            authorizeGoogleBtn.style.display = 'inline-block'; //
+            signoutGoogleBtn.style.display = 'none'; //
         }
     }
 }
-
 function handleAuthorizeGoogleClick() {
     if (googleAuth) googleAuth.signIn();
 }
@@ -108,7 +110,22 @@ function handleAuthorizeGoogleClick() {
 function handleSignoutGoogleClick() {
     if (googleAuth) googleAuth.signOut();
 }
-
+function loadGoogleApiScriptProgrammatically() {
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+        console.log("Google API script loaded programmatically via script.js.");
+        // Now that gapi.js is loaded, call the function that initializes the GAPI client
+        handleGoogleClientLoad(); // This will in turn call gapi.load('client:auth2', ...)
+    };
+    script.onerror = () => {
+        console.error('Error loading Google API script programmatically.');
+        alert('Fallo al cargar la API de Google. Las funciones de Google Calendar no estarán disponibles.');
+    };
+    document.body.appendChild(script);
+}
 // ---- 2. Event Listeners Iniciales ----
 document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', () => auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch(err => alert(err.message)));
