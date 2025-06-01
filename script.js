@@ -65,27 +65,35 @@ const closeModalBtn = document.querySelector('#editModal .close');
 
 // ---- Google API Functions ----
 function handleGoogleClientLoad() {
+    console.log("handleGoogleClientLoad llamado."); // DEBUG
     gapi.load('client:auth2', initGoogleClient);
 }
 // Keep this global, as gapi.load might still rely on it, or for consistency.
 window.handleGoogleClientLoad = handleGoogleClientLoad; //
 
-function initGoogleClient() { //
-    gapi.client.init({ //
-        clientId: GOOGLE_CLIENT_ID, //
-        discoveryDocs: DISCOVERY_DOCS, //
-        scope: SCOPES //
-    }).then(function () { //
-        googleAuth = gapi.auth2.getAuthInstance(); //
-        isGoogleApiLoaded = true; //
-        googleAuth.isSignedIn.listen(updateGoogleSigninStatus); //
-        updateGoogleSigninStatus(googleAuth.isSignedIn.get()); //
+function initGoogleClient() {
+    console.log('initGoogleClient llamado.'); // DEBUG
+    gapi.client.init({
+        clientId: GOOGLE_CLIENT_ID,
+        discoveryDocs: DISCOVERY_DOCS,
+        scope: SCOPES
+    }).then(function () {
+        console.log('gapi.client.init exitoso.'); // DEBUG
+        googleAuth = gapi.auth2.getAuthInstance();
+        console.log('Instancia de googleAuth:', googleAuth); // DEBUG
+        isGoogleApiLoaded = true;
+        googleAuth.isSignedIn.listen(updateGoogleSigninStatus);
+        updateGoogleSigninStatus(googleAuth.isSignedIn.get());
 
-        if (authorizeGoogleBtn) authorizeGoogleBtn.onclick = handleAuthorizeGoogleClick; //
-        if (signoutGoogleBtn) signoutGoogleBtn.onclick = handleSignoutGoogleClick; //
-    }).catch(function(error) { //
-        console.error("Error initializing Google API client: ", JSON.stringify(error, null, 2)); //
-        alert("Error al conectar con Google Calendar. Revisa la consola."); //
+        if (authorizeGoogleBtn) {
+            console.log('Asignando manejador de clic a authorizeGoogleBtn'); // DEBUG
+            authorizeGoogleBtn.onclick = handleAuthorizeGoogleClick;
+        } else {
+            console.error("authorizeGoogleBtn no encontrado"); // DEBUG
+        }
+    }).catch(function(error) {
+        console.error("Error inicializando el cliente de la API de Google: ", JSON.stringify(error, null, 2));
+        alert("Error al conectar con Google Calendar. Revisa la consola.");
     });
 }
 
@@ -104,25 +112,44 @@ function updateGoogleSigninStatus(isSignedIn) { //
     }
 }
 function handleAuthorizeGoogleClick() {
-    if (googleAuth) googleAuth.signIn();
+    console.log('handleAuthorizeGoogleClick llamado.'); // DEBUG
+    console.log('Objeto googleAuth:', googleAuth); // DEBUG
+    console.log('isGoogleApiLoaded:', isGoogleApiLoaded); // DEBUG
+    if (googleAuth && isGoogleApiLoaded) {
+        console.log('Intentando googleAuth.signIn()'); // DEBUG
+        googleAuth.signIn().then(function(googleUser) {
+            console.log('Inicio de sesión de Google exitoso:', googleUser); // DEBUG
+        }).catch(function(error) {
+            console.error('Error en el inicio de sesión de Google:', error); // DEBUG
+            if (error.error === 'popup_closed_by_user') {
+                alert('El inicio de sesión con Google fue cancelado.');
+            } else if (error.error === 'access_denied') {
+                alert('Acceso denegado para Google Calendar.');
+            } else {
+                alert('Error durante el inicio de sesión con Google. Revisa la consola.');
+            }
+        });
+    } else {
+        console.error('Google Auth no está listo o la API no está cargada.'); // DEBUG
+        alert('La API de Google Calendar no está lista. Intenta de nuevo en un momento.');
+    }
 }
 
 function handleSignoutGoogleClick() {
     if (googleAuth) googleAuth.signOut();
 }
 function loadGoogleApiScriptProgrammatically() {
+    console.log("Intentando cargar el script de la API de Google..."); // DEBUG
     const script = document.createElement('script');
     script.src = 'https://apis.google.com/js/api.js';
-    script.async = true;
-    script.defer = true;
+    // ...
     script.onload = () => {
-        console.log("Google API script loaded programmatically via script.js.");
-        // Now that gapi.js is loaded, call the function that initializes the GAPI client
-        handleGoogleClientLoad(); // This will in turn call gapi.load('client:auth2', ...)
+        console.log("Script de la API de Google cargado programáticamente."); // DEBUG
+        handleGoogleClientLoad();
     };
     script.onerror = () => {
-        console.error('Error loading Google API script programmatically.');
-        alert('Fallo al cargar la API de Google. Las funciones de Google Calendar no estarán disponibles.');
+        console.error('Error al cargar el script de la API de Google programáticamente.'); // DEBUG
+        // ...
     };
     document.body.appendChild(script);
 }
@@ -248,7 +275,14 @@ auth.onAuthStateChanged(user => {
         authBox.style.display = 'none';
         appBox.style.display = 'block';
         initTaskListeners(user.uid);
-        loadGoogleCalendarSettingsFromFirebase(user.uid);
+        loadGoogleCalendarSettingsFromFirebase(user.uid); // Carga las preferencias de sincronización de GCal del usuario
+
+        // --- AÑADE ESTA LÍNEA ---
+        // Solo carga e inicializa la API de Google si aún no se ha hecho.
+        if (!isGoogleApiLoaded) { // Añade una comprobación para evitar recargas múltiples
+            loadGoogleApiScriptProgrammatically(); // Comienza a cargar el script de la API de Google
+        }
+
     } else {
         appBox.style.display = 'none';
         authBox.style.display = 'block';
@@ -263,7 +297,17 @@ auth.onAuthStateChanged(user => {
         if (deleteCompletedBtn) deleteCompletedBtn.disabled = true;
         const autoDeleteFrequencySelect = document.getElementById('autoDeleteFrequency');
         if (autoDeleteFrequencySelect) autoDeleteFrequencySelect.value = 'never';
-        if (isGoogleUserSignedIn && googleAuth) googleAuth.signOut(); // Sign out from Google if Firebase session ends
+
+        // Si se cierra la sesión de Firebase, también asegúrate de cerrar la sesión de Google y restablecer la UI
+        if (isGoogleUserSignedIn && googleAuth) {
+            googleAuth.signOut(); // Esto activará updateGoogleSigninStatus
+        } else {
+            // Asegúrate manualmente de que los botones estén en el estado correcto si googleAuth no se inicializó
+            if (authorizeGoogleBtn) authorizeGoogleBtn.style.display = 'inline-block';
+            if (signoutGoogleBtn) signoutGoogleBtn.style.display = 'none';
+        }
+        isGoogleApiLoaded = false; // Restablece el indicador
+        isGoogleUserSignedIn = false; // Restablece el estado de inicio de sesión de Google
     }
 });
 
