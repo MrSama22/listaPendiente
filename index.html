@@ -104,9 +104,10 @@
                 <button id="connectGoogleBtn" class="calendar-btn">
                     📅 Conectar Google Calendar
                 </button>
-                <button id="globalReminderBtn" class="calendar-btn" disabled>
-                    🔔 Crear Recordatorio Global
+                <button class="calendar-btn" onclick="openGlobalReminderModal()" id="globalReminderBtn" disabled>
+                    🔔 Crear Recordatorio Global Personalizado
                 </button>
+                
             </div>
         </div>
         <div class="completed-tasks-controls">
@@ -181,6 +182,30 @@
         </div>
     </div>
 
+    <!-- Modal para recordatorio global -->
+<div class="modal" id="globalReminderModal" style="display:none">
+    <div class="modal-content">
+        <span class="close" onclick="document.getElementById('globalReminderModal').style.display='none'">&times;</span>
+        <h3>Crear Recordatorio Global Personalizado</h3>
+        <label>Fecha y hora:</label>
+        <input type="datetime-local" id="globalReminderDateTime">
+
+        <label>Repetición:</label>
+        <select id="globalReminderRepeat">
+            <option value="none">Ninguna</option>
+            <option value="daily">Diaria</option>
+            <option value="weekly">Semanal</option>
+            <option value="monthly">Mensual</option>
+        </select>
+
+        <div style="display: flex; gap: 10px;">
+            <button onclick="handleCustomGlobalReminder()">Crear</button>
+            <button onclick="showEditGlobalReminderModal()">Editar Último</button>
+          </div>
+    </div>
+</div>
+
+
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
@@ -189,5 +214,7 @@
 
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
+
+    
 </body>
 </html>
