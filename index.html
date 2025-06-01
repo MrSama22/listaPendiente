@@ -267,6 +267,17 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
     <script type="module" src="script.js"></script>
-
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p class="footer-links">
+                <a href="privacy_policy.html" target="_blank">Política de Privacidad</a> |
+                <a href="terms_of_service.html" target="_blank">Condiciones del Servicio</a>
+            </p>
+            <p class="copyright-text">&copy; <span id="currentYear"></span> Task Manager. Todos los derechos reservados.</p>
+            </div>
+    </footer>
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
 </body>
 </html>
