@@ -5,35 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Tareas</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="image-removebg-preview (11) (1).png">
-</head>
+    <link rel="icon" href="image-removebg-preview (11) (1).png"> </head>
 <body>
     <div id="authBox" class="container">
-    <h2>Iniciar sesión</h2>
-    <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su contraseña que desea establecer </p>
+        <h2>Iniciar sesión</h2>
+        <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su contraseña que desea establecer </p>
 
-    <div class="form-group">
-        <input id="email" type="email" placeholder="Correo electrónico" required>
+        <div class="form-group">
+            <input id="email" type="email" placeholder="Correo electrónico" required>
+        </div>
+        <div class="form-group">
+            <input id="password" type="password" placeholder="Contraseña" required>
+        </div>
+        <div class="form-group">
+            <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button id="loginBtn">Iniciar Sesión</button>
+        <button id="registerBtn" class="secondary">Registrarse</button>
+
+        <p class="anuncio">- prontamente pondremos el campo de olvidado contraseña y modulo de seleccion de outfits</p>
     </div>
-    <div class="form-group">
-        <input id="password" type="password" placeholder="Contraseña" required>
-    </div>
-
-    <!-- NUEVO: Enlace de contraseña olvidada -->
-    <div class="form-group">
-        <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu contraseña?</a>
-    </div>
-
-    <button id="loginBtn">Iniciar Sesión</button>
-    <button id="registerBtn" class="secondary">Registrarse</button>
-
-    <p class="anuncio">- prontamente pondremos el campo de olvidado contraseña y modulo de seleccion de outfits</p>
-</div>
 
     <div id="appBox" class="container" style="display:none">
         <div class="header-container">
             <h2>Gestor de Tareas</h2>
-            <button id="logoutBtn" class="logout">Cerrar Sesión</button>
+            <div>
+                <button id="authorizeGoogleBtn" style="background-color: #db4437; margin-right: 10px; color:white; border:none; padding: 8px 12px; border-radius:4px; cursor:pointer;">Conectar Google Calendar</button>
+                <button id="signoutGoogleBtn" style="display:none; background-color: #fbbc05; margin-right: 10px; color:white; border:none; padding: 8px 12px; border-radius:4px; cursor:pointer;">Desconectar Google Calendar</button>
+                <button id="logoutBtn" class="logout">Cerrar Sesión</button>
+            </div>
         </div>
 
         <div class="command-help">
@@ -97,12 +97,31 @@
 
         <button class="add-task">Añadir Tarea</button>
 
-        
         <p class="tittle">LISTA DE TAREAS</p>
+
+        <div id="googleCalendarSettings" class="container" style="margin-bottom:20px; background-color: #e8f0fe; padding:15px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h4><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_3_2x.png" alt="GCal" style="width:20px; height:20px; vertical-align:middle; margin-right:5px;">Configuración Global de Google Calendar</h4>
+            <div class="form-group">
+                <input type="checkbox" id="enableGoogleCalendarSync" checked style="margin-right: 5px;">
+                <label for="enableGoogleCalendarSync" style="font-weight:normal;">Sincronizar tareas con fecha a Google Calendar</label>
+            </div>
+            <div class="form-group">
+                <label for="globalReminderMethod">Método de recordatorio por defecto:</label>
+                <select id="globalReminderMethod">
+                    <option value="popup">Notificación emergente</option>
+                    <option value="email">Correo electrónico</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="globalReminderTime">Tiempo de recordatorio por defecto (ej: 30 para 30 mins antes, o HH:MM para hora fija):</label>
+                <input type="text" id="globalReminderTime" placeholder="Ej: 30 (mins) o 09:00 (hora fija)">
+            </div>
+             <button id="saveGoogleCalendarGlobalSettings" class="secondary">Guardar Config. Calendar</button>
+        </div>
+
         <div class="completed-tasks-controls">
             <div class="form-group">
-                <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
-                <select id="autoDeleteFrequency">
+                <label for="autoDeleteFrequency">Borrar completadas automáticamente cada:</label> <select id="autoDeleteFrequency">
                     <option value="never" selected>Nunca</option>
                     <option value="daily">Día</option>
                     <option value="weekly">Semana</option>
@@ -111,19 +130,17 @@
             </div>
             <button id="deleteCompletedBtn" class="danger-btn" disabled>Eliminar Todas Las Tareas Completadas</button>
         </div>
+
         <div class="task-list">
             <h3 class="section-header">Tareas Completadas:</h3>
             <div id="completedTasks"></div>
 
             <h3 class="section-header">Tareas Pendientes:</h3>
             <div id="pendingTasks">
-
                 <h4 class="section-subheader">- Con Fecha</h4>
                 <div id="datedTasks"></div>
-
                 <h4 class="section-subheader">- Sin Fecha</h4>
                 <div id="undefinedTasks"></div>
-
             </div>
         </div>
 
@@ -135,13 +152,7 @@
                 <button id="nextMonth">&#10095;</button>
             </div>
             <div class="weekdays">
-                <div>Lun</div>
-                <div>Mar</div>
-                <div>Mié</div>
-                <div>Jue</div>
-                <div>Vie</div>
-                <div>Sáb</div>
-                <div>Dom</div>
+                <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
             </div>
             <div id="calendar" class="calendar-grid"></div>
         </div>
@@ -160,14 +171,44 @@
                 <input type="date" id="editDate">
             </div>
             <div class="include-time-checkbox">
-                <input type="checkbox" id="includeTime">
-                <label for="includeTime">Incluir hora específica</label>
+                <input type="checkbox" id="includeTime" style="margin-right: 5px;">
+                <label for="includeTime" style="font-weight:normal;">Incluir hora específica</label>
             </div>
             <div class="form-group" id="timeInputContainer" style="display: none;">
                 <label for="editTime">Hora:</label>
                 <input type="time" id="editTime">
             </div>
-            <button class="save-task" type="button">Guardar</button>
+
+            <div style="border-top: 1px solid #eee; margin-top:15px; padding-top:15px;">
+                 <h4><img src="https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_3_2x.png" alt="GCal" style="width:16px; height:16px; vertical-align:middle; margin-right:5px;">Opciones de Google Calendar</h4>
+                <div class="form-group">
+                    <input type="checkbox" id="editAddToGoogleCalendar" style="margin-right: 5px;">
+                    <label for="editAddToGoogleCalendar" style="font-weight:normal;">Añadir/Actualizar en Google Calendar</label>
+                </div>
+                <div id="editGoogleCalendarOptions" style="display:none; margin-left: 20px; background-color: #f8f9fa; padding:10px; border-radius:5px;">
+                     <div class="form-group">
+                        <label for="editReminderOverride">Recordatorio específico para esta tarea:</label>
+                        <select id="editReminderOverride">
+                            <option value="default">Usar predeterminado global/Calendar</option>
+                            <option value="none">Sin recordatorio</option>
+                            <option value="0">En el momento del evento</option>
+                            <option value="5">5 minutos antes</option>
+                            <option value="15">15 minutos antes</option>
+                            <option value="30">30 minutos antes</option>
+                            <option value="60">1 hora antes</option>
+                            <option value="1440">1 día antes</option>
+                            </select>
+                    </div>
+                   <div class="form-group">
+                        <label for="editReminderMethod">Método de recordatorio para esta tarea:</label>
+                        <select id="editReminderMethod">
+                            <option value="popup">Notificación emergente</option>
+                            <option value="email">Correo electrónico</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button class="save-task" type="button" style="margin-top:15px;">Guardar</button>
         </div>
     </div>
 
@@ -175,8 +216,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
 
-    <script type="module" src="script.js"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="handleGoogleClientLoad()"></script>
 
-    
+    <script type="module" src="script.js"></script>
 </body>
 </html>
