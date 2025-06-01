@@ -8,6 +8,7 @@ const firebaseConfig = {
     appId: "1:66598008920:web:a1e0526d4bca4a01a2f22d",
     measurementId: "G-JN6JXPB2LY"
 };
+const GOOGLE_CALENDAR_EVENT_COLORS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -343,7 +344,7 @@ async function openGlobalReminderModalForEdit(eventId) {
 }
 
 async function handleSaveGlobalReminderFromModal() {
-    if (!currentUserId) { // isGoogleCalendarSignedIn is checked by makeAuthenticatedApiCall
+    if (!currentUserId) {
         alert('Debes estar autenticado.');
         return;
     }
@@ -369,13 +370,19 @@ async function handleSaveGlobalReminderFromModal() {
     const eventEndTime = new Date(reminderDateTime.getTime() + (30 * 60 * 1000));
 
     let descriptionContent = `--- Recordatorio global generado por Gestor de Tareas ---`;
+    // Esta es la sección clave para la descripción:
     if (!editingEventId && repeatOption === 'none') {
-        const pendingTasks = tasks.filter(t => !t.completed && t.dueDate !== 'indefinido' && t.dueDate);
+        const pendingTasks = tasks.filter(t => !t.completed); // CORRECTO: Incluye todas las tareas no completadas
         if (pendingTasks.length > 0) {
+            // La función formatDate se encarga de mostrar "Indefinido" para las tareas sin fecha.
             const tasksListSummary = pendingTasks.map(task => `- ${task.name} (Para: ${formatDate(task.dueDate)})`).join('\n');
             descriptionContent = `Resumen de tareas pendientes al ${new Date().toLocaleString()}:\n\n${tasksListSummary}\n\n${descriptionContent}`;
+        } else {
+            descriptionContent = `No hay tareas pendientes en este momento.\n\n${descriptionContent}`;
         }
     }
+
+    const randomColorId = GOOGLE_CALENDAR_EVENT_COLORS[Math.floor(Math.random() * GOOGLE_CALENDAR_EVENT_COLORS.length)];
 
     const eventResource = {
         summary: summary,
@@ -383,7 +390,7 @@ async function handleSaveGlobalReminderFromModal() {
         start: { dateTime: reminderDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
         end: { dateTime: eventEndTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
         reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }, { method: 'email', minutes: 0 }] },
-        colorId: '11'
+        colorId: randomColorId
     };
     if (recurrenceRule) {
         eventResource.recurrence = recurrenceRule;
@@ -399,12 +406,12 @@ async function handleSaveGlobalReminderFromModal() {
             }), 'Obtener recordatorio global actual para actualizar');
 
             const currentEventData = currentEventResponse.result;
-            const oldRecurrence = currentEventData.recurrence;
-            const newRecurrence = eventResource.recurrence;
+            const oldRecurrence = currentEventData.recurrence || null;
+            const newRecurrence = eventResource.recurrence || null;
             const recurrenceChanged = JSON.stringify(oldRecurrence) !== JSON.stringify(newRecurrence);
 
             if (recurrenceChanged) {
-                await makeAuthenticatedApiCall(() => gapi.client.calendar.events.delete({ calendarId: 'primary', eventId: editingEventId }), 'Eliminar recordatorio global antiguo');
+                await makeAuthenticatedApiCall(() => gapi.client.calendar.events.delete({ calendarId: 'primary', eventId: editingEventId }), 'Eliminar recordatorio global antiguo por cambio de recurrencia');
                 const response = await makeAuthenticatedApiCall(() => gapi.client.calendar.events.insert({ calendarId: 'primary', resource: eventResource }), 'Crear nuevo recordatorio global (por cambio de recurrencia)');
                 await removeUserGlobalReminderEventId(currentUserId, editingEventId);
                 await addUserGlobalReminderEventId(currentUserId, response.result.id);
@@ -1390,10 +1397,18 @@ function getRemainingDays(dueDateStr) {
 }
 
 function formatDate(dateStr) {
-    if(dateStr==='indefinido'||!dateStr) return 'Indefinido';
-    const d=new Date(dateStr); const opts={weekday:'long',year:'numeric',month:'long',day:'numeric'};
-    if(d.getHours()!==23||d.getMinutes()!==59 || d.getSeconds() !== 59) return d.toLocaleDateString('es-ES',{...opts,hour:'2-digit',minute:'2-digit'});
-    return d.toLocaleDateString('es-ES',opts);
+    if (dateStr === 'indefinido' || !dateStr) return 'Indefinido';
+    const d = new Date(dateStr);
+    // Comprobación adicional por si dateStr es una cadena que resulta en "Invalid Date"
+    if (isNaN(d.getTime())) {
+        return 'Fecha inválida';
+    }
+    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    // Si la hora no es el final del día por defecto (23:59:59), incluye la hora.
+    if (d.getHours() !== 23 || d.getMinutes() !== 59 || d.getSeconds() !== 59) {
+        return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('es-ES', opts);
 }
 function createTaskElement(task) {
     const el=document.createElement('div');
@@ -1542,12 +1557,16 @@ function scrollToTodayOnMobile() {
     if (window.matchMedia('(max-width: 800px)').matches) {
         const todayElement = document.querySelector('.calendar-day.today');
         if (todayElement) {
+            // Basado en tu style.css, el calendario tiene overflow-x: auto en móviles,
+            // lo que significa que el scroll principal es horizontal.
+            // 'inline: "center"' intentará centrar el día actual horizontalmente.
+            // 'block: "nearest"' asegura que sea visible verticalmente sin scroll innecesario.
             todayElement.scrollIntoView({
                 behavior: 'smooth', // Para un desplazamiento suave
-                block: 'center',    // CAMBIADO: Intenta centrar el elemento verticalmente en la pantalla
-                inline: 'center'    // Mantiene el centrado horizontal dentro del calendario
+                block: 'nearest',
+                inline: 'center'
             });
-            console.log('Calendario desplazado al día actual (intentando centrar en pantalla) en vista móvil.');
+            console.log('Calendario desplazado al día actual en vista móvil.');
         }
     }
 }
