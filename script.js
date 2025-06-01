@@ -1542,16 +1542,12 @@ function scrollToTodayOnMobile() {
     if (window.matchMedia('(max-width: 800px)').matches) {
         const todayElement = document.querySelector('.calendar-day.today');
         if (todayElement) {
-            // Basado en tu style.css, el calendario tiene overflow-x: auto en móviles,
-            // lo que significa que el scroll principal es horizontal.
-            // 'inline: "center"' intentará centrar el día actual horizontalmente.
-            // 'block: "nearest"' asegura que sea visible verticalmente sin scroll innecesario.
             todayElement.scrollIntoView({
                 behavior: 'smooth', // Para un desplazamiento suave
-                block: 'nearest',
-                inline: 'center'
+                block: 'center',    // CAMBIADO: Intenta centrar el elemento verticalmente en la pantalla
+                inline: 'center'    // Mantiene el centrado horizontal dentro del calendario
             });
-            console.log('Calendario desplazado al día actual en vista móvil.');
+            console.log('Calendario desplazado al día actual (intentando centrar en pantalla) en vista móvil.');
         }
     }
 }
