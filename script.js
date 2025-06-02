@@ -1408,73 +1408,20 @@ function addTask() {
     clearForm();
 }
 
-async function toggleTaskStatus(taskId) { // Asegúrate de que sea async
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
+function toggleTaskStatus(taskId) {
+    const task = tasks.find(t=>t.id===taskId);
+    if(task) {
         const newCompletedStatus = !task.completed;
-        const oldGoogleCalendarEventId = task.googleCalendarEventId; // Guarda el ID antes de cualquier actualización
-
-        try {
-            // Actualiza el estado de completado en Firestore
-            await updateTaskDB(taskId, { completed: newCompletedStatus });
-            console.log(`Estado de la tarea ${taskId} cambiado a ${newCompletedStatus}`);
-
-            // Si la tarea se marca como COMPLETADA y TENÍA un recordatorio en Google Calendar
-            if (newCompletedStatus && oldGoogleCalendarEventId) {
-                if (isGoogleCalendarSignedIn) { // Solo intentar si está conectado a Google Calendar
-                    console.log(`Tarea ${taskId} completada. Intentando eliminar recordatorio de GCal ${oldGoogleCalendarEventId}`);
-                    try {
-                        await deleteGoogleCalendarEvent(oldGoogleCalendarEventId); // Elimina el evento de GCal
-                        // Elimina la referencia al evento de GCal en Firestore para esta tarea
-                        await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
-                        console.log(`Recordatorio de GCal ${oldGoogleCalendarEventId} eliminado y campo en Firestore limpiado para tarea ${taskId}.`);
-                        alert(`Recordatorio de Google Calendar para la tarea "${task.name}" eliminado porque la tarea fue completada.`);
-                        
-                        // Actualiza el objeto local de la tarea para reflejar el cambio inmediatamente en la UI (opcional, ya que Firestore lo hará)
-                        const localTaskIndex = tasks.findIndex(t => t.id === taskId);
-                        if (localTaskIndex !== -1) {
-                            delete tasks[localTaskIndex].googleCalendarEventId;
-                        }
-                        
-                    } catch (gcalError) {
-                        console.error(`Error eliminando evento de GCal ${oldGoogleCalendarEventId} para tarea completada ${taskId}:`, gcalError);
-                        // Evita doble alerta si es un error de autenticación (makeAuthenticatedApiCall ya alerta)
-                        if (gcalError.message && !gcalError.message.includes("Google Authentication Error") && 
-                            !(gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410))) {
-                           alert(`No se pudo eliminar el recordatorio de Google Calendar para la tarea completada. Puede que necesites eliminarlo manualmente.\nError: ${gcalError.result?.error?.message || gcalError.message}`);
-                        }
-                        // Si el evento no se encontró (404/410), igualmente limpiamos el ID de Firestore
-                        if (gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410)) {
-                            await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
-                            console.log(`Evento de GCal ${oldGoogleCalendarEventId} no encontrado, campo en Firestore limpiado para tarea ${taskId}.`);
-                        }
-                        // Para otros errores de GCal, el ID se mantiene en Firestore para posible revisión manual.
-                    }
-                } else {
-                    console.log(`Tarea ${taskId} completada con recordatorio de GCal ${oldGoogleCalendarEventId}, pero no conectado a GCal. El ID del recordatorio se mantiene en Firestore.`);
-                    // Podrías alertar al usuario que necesita conectarse para que el recordatorio se borre de GCal.
-                }
-            }
-
-            // Actualiza la lista de recordatorios individuales si la página de configuración está visible
-            if (settingsPage.style.display === 'block' && 
-                document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && 
-                isGoogleCalendarSignedIn && currentUserId) {
+        updateTaskDB(taskId, {completed: newCompletedStatus})
+        .then(() => {
+            if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && isGoogleCalendarSignedIn && currentUserId) {
                 renderIndividualTaskRemindersList();
             }
-            
-            // Actualiza las descripciones de los recordatorios globales no recurrentes,
-            // ya que el estado 'completado' de una tarea afecta la lista de pendientes.
-            if (currentUserId) {
-                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-            }
-
-        } catch (dbError) {
-            console.error(`Error actualizando estado de completado de tarea ${taskId} en DB:`, dbError);
-            alert("Error al actualizar el estado de la tarea.");
-        }
+            if (currentUserId) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+        });
     }
 }
+
 async function deleteTask(taskId) {
     if (confirm('¿Eliminar esta tarea?')) {
         const task = tasks.find(t=>t.id===taskId);
@@ -1540,41 +1487,31 @@ function formatDate(dateStr) { // Robusted version
 }
 
 function createTaskElement(task) {
-    const el = document.createElement('div');
-    el.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
-    el.tabIndex = 0;
-    el.dataset.id = task.id;
-    const remDays = !task.completed && task.dueDate !== 'indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
+    const el=document.createElement('div');
+    el.className=`task-item${task.completed?' completed':''}${selectedTaskId===task.id?' selected':''}`;
+    el.tabIndex=0; el.dataset.id=task.id;
+    const remDays = !task.completed && task.dueDate!=='indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
+    let remIcon = '🔔'; let remTitle = "Crear recordatorio en Google Calendar";
+    if(task.googleCalendarEventId){ remIcon='🗓️'; remTitle="Editar/Eliminar recordatorio existente de Google Calendar"; }
 
-    let remBtn = ''; // Por defecto, no hay botón de recordatorio
+    // Disable reminder button if task is completed, has no due date, or GCal not signed in
+    const reminderButtonDisabled = task.completed || task.dueDate === 'indefinido' || !task.dueDate || !isGoogleCalendarSignedIn;
+    const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled' : ''}>${remIcon}</button>`;
 
-    // Solo generar el botón de recordatorio si la tarea NO está completada
-    if (!task.completed) {
-        let remIcon = '🔔';
-        let remTitle = "Crear recordatorio en Google Calendar";
-        if (task.googleCalendarEventId) {
-            remIcon = '🗓️';
-            remTitle = "Editar/Eliminar recordatorio existente de Google Calendar";
-        }
-        // El botón se deshabilita si no hay fecha de entrega o no se ha iniciado sesión en Google Calendar
-        const reminderButtonDisabled = (task.dueDate === 'indefinido' || !task.dueDate) || !isGoogleCalendarSignedIn;
-        remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled' : ''}>${remIcon}</button>`;
-    }
 
     el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
-                        <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como Pendiente' : 'Marcar como Completada'}">${task.completed ? '❌' : '✅'}</button>
+                        <button class="toggle-status-button${task.completed?' completed':''}" data-id="${task.id}" title="${task.completed?'Marcar como Pendiente':'Marcar como Completada'}">${task.completed?'❌':'✅'}</button>
                         <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
-                        ${remBtn}  // Si la tarea está completada, remBtn será una cadena vacía y no se renderizará el botón
+                        ${remBtn}
                     </div>`;
-    el.addEventListener('click', (e) => { if (!e.target.closest('button')) { selectedTaskId = task.id === selectedTaskId ? null : task.id; renderTasks(); } });
+    el.addEventListener('click', (e)=>{ if(!e.target.closest('button')){selectedTaskId=task.id===selectedTaskId?null:task.id; renderTasks();}});
     let pressTimer;
-    const startPress = (e) => { if (!e.target.closest('button')) pressTimer = setTimeout(() => handleLongPress(task), 500); };
+    const startPress = (e) => { if(!e.target.closest('button')) pressTimer = setTimeout(()=>handleLongPress(task), 500); };
     const cancelPress = () => clearTimeout(pressTimer);
-    el.addEventListener('mousedown', startPress);
-    el.addEventListener('touchstart', startPress);
-    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
+    el.addEventListener('mousedown', startPress); el.addEventListener('touchstart', startPress);
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(evt=>el.addEventListener(evt, cancelPress));
     return el;
 }
 function handleLongPress(task) {
