@@ -319,7 +319,7 @@ function updateCalendarRelatedUI() {
             btn.style.display = 'none';
         } else {
             btn.style.display = 'inline-flex';
-            btn.disabled = !isGoogleCalendarSignedIn || !task.dueDate || task.dueDate === 'indefinido';
+            btn.disabled = !isGoogleCalendarSignedIn || !task.dueDate  ;// || task.dueDate === 'indefinido'
         }
     });
 }
