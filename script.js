@@ -1408,20 +1408,73 @@ function addTask() {
     clearForm();
 }
 
-function toggleTaskStatus(taskId) {
-    const task = tasks.find(t=>t.id===taskId);
-    if(task) {
+async function toggleTaskStatus(taskId) { // Asegúrate de que sea async
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
         const newCompletedStatus = !task.completed;
-        updateTaskDB(taskId, {completed: newCompletedStatus})
-        .then(() => {
-            if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && isGoogleCalendarSignedIn && currentUserId) {
+        const oldGoogleCalendarEventId = task.googleCalendarEventId; // Guarda el ID antes de cualquier actualización
+
+        try {
+            // Actualiza el estado de completado en Firestore
+            await updateTaskDB(taskId, { completed: newCompletedStatus });
+            console.log(`Estado de la tarea ${taskId} cambiado a ${newCompletedStatus}`);
+
+            // Si la tarea se marca como COMPLETADA y TENÍA un recordatorio en Google Calendar
+            if (newCompletedStatus && oldGoogleCalendarEventId) {
+                if (isGoogleCalendarSignedIn) { // Solo intentar si está conectado a Google Calendar
+                    console.log(`Tarea ${taskId} completada. Intentando eliminar recordatorio de GCal ${oldGoogleCalendarEventId}`);
+                    try {
+                        await deleteGoogleCalendarEvent(oldGoogleCalendarEventId); // Elimina el evento de GCal
+                        // Elimina la referencia al evento de GCal en Firestore para esta tarea
+                        await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
+                        console.log(`Recordatorio de GCal ${oldGoogleCalendarEventId} eliminado y campo en Firestore limpiado para tarea ${taskId}.`);
+                        alert(`Recordatorio de Google Calendar para la tarea "${task.name}" eliminado porque la tarea fue completada.`);
+                        
+                        // Actualiza el objeto local de la tarea para reflejar el cambio inmediatamente en la UI (opcional, ya que Firestore lo hará)
+                        const localTaskIndex = tasks.findIndex(t => t.id === taskId);
+                        if (localTaskIndex !== -1) {
+                            delete tasks[localTaskIndex].googleCalendarEventId;
+                        }
+                        
+                    } catch (gcalError) {
+                        console.error(`Error eliminando evento de GCal ${oldGoogleCalendarEventId} para tarea completada ${taskId}:`, gcalError);
+                        // Evita doble alerta si es un error de autenticación (makeAuthenticatedApiCall ya alerta)
+                        if (gcalError.message && !gcalError.message.includes("Google Authentication Error") && 
+                            !(gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410))) {
+                           alert(`No se pudo eliminar el recordatorio de Google Calendar para la tarea completada. Puede que necesites eliminarlo manualmente.\nError: ${gcalError.result?.error?.message || gcalError.message}`);
+                        }
+                        // Si el evento no se encontró (404/410), igualmente limpiamos el ID de Firestore
+                        if (gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410)) {
+                            await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
+                            console.log(`Evento de GCal ${oldGoogleCalendarEventId} no encontrado, campo en Firestore limpiado para tarea ${taskId}.`);
+                        }
+                        // Para otros errores de GCal, el ID se mantiene en Firestore para posible revisión manual.
+                    }
+                } else {
+                    console.log(`Tarea ${taskId} completada con recordatorio de GCal ${oldGoogleCalendarEventId}, pero no conectado a GCal. El ID del recordatorio se mantiene en Firestore.`);
+                    // Podrías alertar al usuario que necesita conectarse para que el recordatorio se borre de GCal.
+                }
+            }
+
+            // Actualiza la lista de recordatorios individuales si la página de configuración está visible
+            if (settingsPage.style.display === 'block' && 
+                document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && 
+                isGoogleCalendarSignedIn && currentUserId) {
                 renderIndividualTaskRemindersList();
             }
-            if (currentUserId) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-        });
+            
+            // Actualiza las descripciones de los recordatorios globales no recurrentes,
+            // ya que el estado 'completado' de una tarea afecta la lista de pendientes.
+            if (currentUserId) {
+                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+            }
+
+        } catch (dbError) {
+            console.error(`Error actualizando estado de completado de tarea ${taskId} en DB:`, dbError);
+            alert("Error al actualizar el estado de la tarea.");
+        }
     }
 }
-
 async function deleteTask(taskId) {
     if (confirm('¿Eliminar esta tarea?')) {
         const task = tasks.find(t=>t.id===taskId);
