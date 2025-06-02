@@ -55,7 +55,6 @@ button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
-
 .task-list {
     margin-top: 20px;
 }
@@ -106,7 +105,7 @@ button:disabled {
     justify-content: center;
     font-size: 18px;
     border-radius: 50%;
-    background: white;
+    background: rgb(214, 165, 73);
     color: #333;
     border: 1px solid #eee;
     transition: transform 0.2s, background-color 0.2s;
@@ -504,7 +503,7 @@ button.danger-btn {
     background-color: #f44336;
     color: white;
     width: 100%;
-    margin: 0 0px;
+    margin: 0 30px;
 }
 button.danger-btn:hover {
     background-color: #d32f2f;
@@ -637,11 +636,6 @@ button.danger-btn:disabled {
         width: 90%;
         box-shadow: 0px 10px 15px gray;
 
-    button.add-task {
-        width: 100%;
-        margin:0 0 10px 0;
-}
-
     }
 }
 
@@ -734,7 +728,7 @@ button.danger-btn:disabled {
     justify-content: center;
 }
 .calendar-reminder-btn:hover:not(:disabled) {
-    background-color: #2d8a47;
+    background-color: rgb(233, 168, 48);
 }
 .calendar-reminder-btn:disabled {
     background-color: #ccc;
