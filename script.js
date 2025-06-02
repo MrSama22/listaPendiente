@@ -45,6 +45,7 @@ const saveGlobalReminderBtn = document.getElementById('saveGlobalReminderBtn');
 const individualTaskRemindersListUI = document.getElementById('individualTaskRemindersList');
 const noIndividualTaskRemindersMsg = document.getElementById('noIndividualTaskRemindersMsg');
 
+// Al inicio de las referencias DOM o dentro de DOMContentLoaded
 
 // ---- Google Calendar Configuration ----
 const GOOGLE_CONFIG = {
@@ -55,6 +56,7 @@ const GOOGLE_CONFIG = {
 };
 
 const GOOGLE_CALENDAR_EVENT_COLORS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
+const randomColorId = GOOGLE_CALENDAR_EVENT_COLORS[Math.floor(Math.random() * GOOGLE_CALENDAR_EVENT_COLORS.length)];
 // IDs de colores de Google Calendar y sus nombres comunes (aproximados):
 // 1: Lavanda, 2: Salvia, 3: Uva, 4: Flamenco, 5: Banana,
 // 6: Mandarina, 7: Pavo real, 8: Grafito, 9: Arándano, 10: Albahaca, 11: Tomate
@@ -191,31 +193,102 @@ function signInToGoogle() {
     });
     tokenClient.requestAccessToken({ prompt: 'consent' });
 }
+function signOutFromGoogleCalendar() {
+    console.log('Función signOutFromGoogleCalendar iniciada.'); // LOG 3
+    console.log('Estado de isGoogleCalendarSignedIn al inicio:', isGoogleCalendarSignedIn); // LOG 4
 
+    if (!isGoogleCalendarSignedIn) {
+        console.log('No conectado a Google Calendar, saliendo de la función.'); // LOG 5
+        alert('No estás conectado a Google Calendar.');
+        return;
+    }
+
+    console.log('Mostrando diálogo de confirmación.'); // LOG 6
+    if (confirm("¿Estás seguro de que deseas desconectar tu cuenta de Google Calendar de esta aplicación?\nEsto no afectará tus eventos en Google Calendar, solo la conexión con esta app y se eliminarán los recordatorios de la lista de configuración.")) {
+        console.log('Usuario confirmó la desconexión.'); // LOG 7
+        const token = localStorage.getItem('googleAccessToken');
+        console.log('Token obtenido de localStorage:', token); // LOG 8
+
+        if (token && google && google.accounts && google.accounts.oauth2) {
+            console.log('Intentando revocar token de Google...'); // LOG 9
+            try {
+                google.accounts.oauth2.revoke(token, () => {
+                    console.log('Respuesta de google.accounts.oauth2.revoke: Token de acceso de Google revocado.'); // LOG 10
+                });
+            } catch (revokeError) {
+                console.warn("Error al intentar revocar el token de Google:", revokeError); // LOG DE ADVERTENCIA 1
+            }
+        } else {
+            console.log('No se intentará revocar el token (token o servicios de Google no disponibles).'); // LOG 11
+        }
+
+        if (gapi && gapi.client) {
+            console.log('Limpiando token del cliente GAPI.'); // LOG 12
+            gapi.client.setToken(null); 
+            console.log('Token de GAPI cliente limpiado.'); // LOG 13
+        } else {
+            console.log('Cliente GAPI no disponible para limpiar token.'); // LOG 14
+        }
+
+        localStorage.removeItem('googleAccessToken');
+        console.log('Token eliminado de localStorage.'); // LOG 15
+        isGoogleCalendarSignedIn = false;
+        console.log('isGoogleCalendarSignedIn establecido en false.'); // LOG 16
+        
+        // Llama a la función para detener el intervalo de actualización de recordatorios recurrentes si existe
+        if (typeof stopRepeatingRemindersUpdateInterval === 'function') {
+            stopRepeatingRemindersUpdateInterval(); 
+            console.log('Intervalo de recordatorios detenido.'); // LOG 17
+        } else {
+            console.warn('Función stopRepeatingRemindersUpdateInterval no encontrada.');
+        }
+        
+        console.log('Llamando a updateCalendarRelatedUI...'); // LOG 18
+        if (typeof updateCalendarRelatedUI === 'function') {
+            updateCalendarRelatedUI(); 
+        } else {
+            console.warn('Función updateCalendarRelatedUI no encontrada.');
+        }
+
+        // Limpiar explícitamente las listas en la UI de configuración
+        if (globalRemindersListUI) globalRemindersListUI.innerHTML = '';
+        if (noGlobalRemindersMsg) {
+            noGlobalRemindersMsg.textContent = 'Conéctate a Google Calendar para ver tus recordatorios globales.';
+            noGlobalRemindersMsg.style.display = 'block';
+        }
+        if (individualTaskRemindersListUI) individualTaskRemindersListUI.innerHTML = '';
+        if (noIndividualTaskRemindersMsg) {
+            noIndividualTaskRemindersMsg.textContent = 'Conéctate a Google Calendar para ver los recordatorios de tareas.';
+            noIndividualTaskRemindersMsg.style.display = 'block';
+        }
+        console.log('Listas de recordatorios en UI limpiadas.'); // LOG 18.1
+
+        alert('Desconectado de Google Calendar exitosamente.');
+        console.log('Alerta de desconexión exitosa mostrada.'); // LOG 19
+    } else {
+        console.log('Usuario canceló la desconexión.'); // LOG 20
+    }
+}
 function updateCalendarRelatedUI() {
     const connectGoogleBtn = document.getElementById('connectGoogleBtn');
+    const disconnectGoogleBtn = document.getElementById('disconnectGoogleBtn'); // Referencia al botón
+
     if (connectGoogleBtn) {
         connectGoogleBtn.disabled = isGoogleCalendarSignedIn;
         connectGoogleBtn.textContent = isGoogleCalendarSignedIn ? '✅ Conectado a Google Calendar' : '📅 Conectar Google Calendar';
     }
-    if (addNewGlobalReminderBtn) {
+
+    // --- INICIO: LÓGICA PARA MOSTRAR/OCULTAR BOTÓN DE DESCONEXIÓN ---
+    if (disconnectGoogleBtn) { 
+        disconnectGoogleBtn.style.display = isGoogleCalendarSignedIn ? 'block' : 'none';
+    }
+    // --- FIN: LÓGICA PARA MOSTRAR/OCULTAR BOTÓN DE DESCONEXIÓN ---
+
+    if (addNewGlobalReminderBtn) { // Asegúrate de que este botón también se actualice
         addNewGlobalReminderBtn.disabled = !isGoogleCalendarSignedIn;
     }
-    document.querySelectorAll('.calendar-reminder-btn').forEach(btn => {
-        const task = tasks.find(t => t.id === btn.dataset.id);
-        
-        if (!task) return;
-    
-        if (task.completed) {
-            btn.style.display = 'none'; // Ocultar solo si está completada
-        } else {
-            btn.style.display = 'inline-flex'; // Asegurar que se vea para las no completadas
-    
-            // Habilitar o deshabilitar según conexión y fecha
-            btn.disabled = !isGoogleCalendarSignedIn  || !task.dueDate;
-        }
-    });
 
+    // Si no está conectado a Google Calendar o no hay usuario
     if (!isGoogleCalendarSignedIn || !currentUserId) {
         if (globalRemindersListUI) globalRemindersListUI.innerHTML = '';
         if (noGlobalRemindersMsg) {
@@ -228,17 +301,27 @@ function updateCalendarRelatedUI() {
             noIndividualTaskRemindersMsg.style.display = 'block';
         }
     } else {
+        // Lógica existente para cuando está conectado (cargar mensajes, etc.)
         if (noGlobalRemindersMsg && globalRemindersListUI && globalRemindersListUI.children.length === 0) {
             noGlobalRemindersMsg.textContent = 'Cargando recordatorios globales...';
-             // renderGlobalRemindersList will update this if list stays empty
             noGlobalRemindersMsg.style.display = 'block';
         }
         if (noIndividualTaskRemindersMsg && individualTaskRemindersListUI && individualTaskRemindersListUI.children.length === 0) {
             noIndividualTaskRemindersMsg.textContent = 'Cargando recordatorios de tareas...';
-            // renderIndividualTaskRemindersList will update this
             noIndividualTaskRemindersMsg.style.display = 'block';
         }
     }
+    // Actualizar estado de los botones de recordatorio en cada tarea
+    document.querySelectorAll('.calendar-reminder-btn').forEach(btn => {
+        const task = tasks.find(t => t.id === btn.dataset.id);
+        if (!task) return;
+        if (task.completed) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'inline-flex';
+            btn.disabled = !isGoogleCalendarSignedIn || !task.dueDate || task.dueDate === 'indefinido';
+        }
+    });
 }
 
 async function deleteGoogleCalendarEvent(eventId) {
@@ -328,7 +411,7 @@ async function handleSaveGlobalReminderFromModal() {
     }
 
 
-    const randomColorId = GOOGLE_CALENDAR_EVENT_COLORS[Math.floor(Math.random() * GOOGLE_CALENDAR_EVENT_COLORS.length)];
+    
 
     const eventResource = {
         summary: summary,
@@ -458,13 +541,14 @@ async function updateAllNonRepeatingGlobalRemindersDescriptions(userId) {
 }
 
 // ---- START: New functions for repeating reminders update interval ----
+// ---- START: Modified functions for repeating reminders update interval ----
 async function updateRepeatingGlobalRemindersDescriptions(userId) {
     if (!userId || !isGoogleCalendarSignedIn || !gapi || !gapi.client || !gapi.client.calendar) {
         console.log("Actualización de recordatorios globales RECURRENTES omitida: Se requiere inicio de sesión en GCal y usuario.");
         return;
     }
 
-    console.log("Iniciando actualización de descripciones para recordatorios globales RECURRENTES...");
+    console.log("Iniciando actualización de descripciones/color para recordatorios globales RECURRENTES...");
     const eventIds = await getUserGlobalReminderEventIds(userId);
 
     if (eventIds.length === 0) {
@@ -479,7 +563,7 @@ async function updateRepeatingGlobalRemindersDescriptions(userId) {
             const eventResponse = await makeAuthenticatedApiCall(() => gapi.client.calendar.events.get({
                 calendarId: 'primary',
                 eventId: eventId
-            }), `Obtener evento RECURRENTE ${eventId} para actualizar descripción`);
+            }), `Obtener evento RECURRENTE ${eventId} para actualizar descripción y mantener color`);
 
             const eventData = eventResponse.result;
 
@@ -489,25 +573,38 @@ async function updateRepeatingGlobalRemindersDescriptions(userId) {
                 continue;
             }
 
-            // Check if it IS a repeating event
+            // Procesar solo eventos recurrentes en esta función
             if (eventData.recurrence && eventData.recurrence.length > 0) {
+                
+                // Preparar el cuerpo de la solicitud de actualización (patch)
+                const patchResource = {
+                    description: newTasksDescription
+                };
+
+                // Añadir explícitamente el colorId actual al cuerpo del patch si existe
+                // Esto asegura que el color se mantenga, aunque la API debería hacerlo por defecto.
+                if (eventData.colorId) {
+                    patchResource.colorId = eventData.colorId;
+                }
+                
+                // Solo actualiza si la descripción es diferente.
+                // El colorId se envía para asegurar su persistencia.
                 if (eventData.description !== newTasksDescription) {
                     await makeAuthenticatedApiCall(() => gapi.client.calendar.events.patch({
                         calendarId: 'primary',
                         eventId: eventId,
-                        resource: { description: newTasksDescription }
-                    }), `Actualizar descripción (patch) del evento RECURRENTE ${eventId}`);
-                    console.log(`Descripción del evento global RECURRENTE ${eventId} actualizada.`);
+                        resource: patchResource // patchResource contiene la descripción y el colorId
+                    }), `Actualizar descripción y mantener color del evento RECURRENTE ${eventId}`);
+                    console.log(`Descripción del evento global RECURRENTE ${eventId} actualizada, color (${eventData.colorId || 'default'}) mantenido.`);
                 } else {
-                    // console.log(`Descripción del evento global RECURRENTE ${eventId} ya está actualizada.`);
+                    // console.log(`Descripción del evento global RECURRENTE ${eventId} ya está actualizada. Color no modificado.`);
                 }
             } else {
-                // This function specifically targets REPEATING reminders. Non-repeating ones are handled by updateAllNonRepeatingGlobalRemindersDescriptions.
                 // console.log(`Evento ${eventId} NO es recurrente. Omitiendo en la función de actualización de recurrentes.`);
             }
 
         } catch (error) {
-            console.error(`Error actualizando descripción para evento global RECURRENTE ${eventId}:`, error);
+            console.error(`Error actualizando descripción/color para evento global RECURRENTE ${eventId}:`, error);
             if (error.result?.error?.code === 404 || error.result?.error?.code === 410) {
                 console.log(`Evento RECURRENTE ${eventId} no encontrado en Google Calendar, eliminando referencia de Firestore.`);
                 await removeUserGlobalReminderEventId(userId, eventId);
@@ -515,8 +612,9 @@ async function updateRepeatingGlobalRemindersDescriptions(userId) {
             // No re-render here, this is a background task.
         }
     }
-    console.log("Finalizada actualización de descripciones para recordatorios globales RECURRENTES.");
+    console.log("Finalizada actualización de descripciones/color para recordatorios globales RECURRENTES.");
 }
+// ... (el resto de las funciones startRepeatingRemindersUpdateInterval y stopRepeatingRemindersUpdateInterval permanecen igual)
 
 function startRepeatingRemindersUpdateInterval() {
     if (repeatingRemindersIntervalId) {
@@ -924,7 +1022,7 @@ async function confirmAndSaveIndividualTaskReminder(taskId) {
         start: { dateTime: reminderDateTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
         end: { dateTime: eventEndTime.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
         reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 0 }, { method: 'email', minutes: 0 }] },
-        colorId: '4' 
+        colorId: randomColorId 
     };
      if (recurrenceRule) {
         eventResource.recurrence = recurrenceRule;
@@ -1086,6 +1184,17 @@ async function editTaskReminder(taskId) {
 
 // ---- 2. Event Listeners Iniciales ----
 document.addEventListener('DOMContentLoaded', () => {
+    // --- INICIO: CÓDIGO PARA EL BOTÓN DE DESCONECTAR GOOGLE CALENDAR ---
+    const disconnectGCalBtn = document.getElementById('disconnectGoogleBtn'); // Asegúrate que el ID coincida con tu HTML
+    if (disconnectGCalBtn) {
+        console.log('Botón "disconnectGoogleBtn" encontrado en el DOM.'); // LOG 1
+        disconnectGCalBtn.addEventListener('click', () => {
+            console.log('Clic detectado en "disconnectGoogleBtn".'); // LOG 2
+            signOutFromGoogleCalendar();
+        });
+    } else {
+        console.error('Error: Botón "disconnectGoogleBtn" NO encontrado en el DOM.'); // LOG DE ERROR 1
+    }
     loginBtn.addEventListener('click', () => auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch(err => alert(err.message)));
     registerBtn.addEventListener('click', () => auth.createUserWithEmailAndPassword(emailInput.value, passInput.value).catch(err => alert(err.message)));
     logoutBtn.addEventListener('click', () => {
