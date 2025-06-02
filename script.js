@@ -196,10 +196,18 @@ function updateCalendarRelatedUI() {
     }
     document.querySelectorAll('.calendar-reminder-btn').forEach(btn => {
         const task = tasks.find(t => t.id === btn.dataset.id);
-         // Disable if not signed in, OR if task is completed, OR if task has no due date
-        btn.disabled = !isGoogleCalendarSignedIn || (task && (task.completed || task.dueDate === 'indefinido' || !task.dueDate));
+        
+        if (!task) return;
+    
+        if (task.completed) {
+            btn.style.display = 'none'; // Ocultar solo si está completada
+        } else {
+            btn.style.display = 'inline-flex'; // Asegurar que se vea para las no completadas
+    
+            // Habilitar o deshabilitar según conexión y fecha
+            btn.disabled = !isGoogleCalendarSignedIn || task.dueDate === 'indefinido' || !task.dueDate;
+        }
     });
-
 
     if (!isGoogleCalendarSignedIn || !currentUserId) {
         if (globalRemindersListUI) globalRemindersListUI.innerHTML = '';
