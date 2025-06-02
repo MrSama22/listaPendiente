@@ -205,7 +205,7 @@ function updateCalendarRelatedUI() {
             btn.style.display = 'inline-flex'; // Asegurar que se vea para las no completadas
     
             // Habilitar o deshabilitar según conexión y fecha
-            btn.disabled = !isGoogleCalendarSignedIn || task.dueDate === 'indefinido' || !task.dueDate;
+            btn.disabled = !isGoogleCalendarSignedIn  || !task.dueDate;
         }
     });
 
