@@ -1540,31 +1540,41 @@ function formatDate(dateStr) { // Robusted version
 }
 
 function createTaskElement(task) {
-    const el=document.createElement('div');
-    el.className=`task-item${task.completed?' completed':''}${selectedTaskId===task.id?' selected':''}`;
-    el.tabIndex=0; el.dataset.id=task.id;
-    const remDays = !task.completed && task.dueDate!=='indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
-    let remIcon = '🔔'; let remTitle = "Crear recordatorio en Google Calendar";
-    if(task.googleCalendarEventId){ remIcon='🗓️'; remTitle="Editar/Eliminar recordatorio existente de Google Calendar"; }
+    const el = document.createElement('div');
+    el.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
+    el.tabIndex = 0;
+    el.dataset.id = task.id;
+    const remDays = !task.completed && task.dueDate !== 'indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
 
-    // Disable reminder button if task is completed, has no due date, or GCal not signed in
-    const reminderButtonDisabled = task.completed || task.dueDate === 'indefinido' || !task.dueDate || !isGoogleCalendarSignedIn;
-    const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled' : ''}>${remIcon}</button>`;
+    let remBtn = ''; // Por defecto, no hay botón de recordatorio
 
+    // Solo generar el botón de recordatorio si la tarea NO está completada
+    if (!task.completed) {
+        let remIcon = '🔔';
+        let remTitle = "Crear recordatorio en Google Calendar";
+        if (task.googleCalendarEventId) {
+            remIcon = '🗓️';
+            remTitle = "Editar/Eliminar recordatorio existente de Google Calendar";
+        }
+        // El botón se deshabilita si no hay fecha de entrega o no se ha iniciado sesión en Google Calendar
+        const reminderButtonDisabled = (task.dueDate === 'indefinido' || !task.dueDate) || !isGoogleCalendarSignedIn;
+        remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled' : ''}>${remIcon}</button>`;
+    }
 
     el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
-                        <button class="toggle-status-button${task.completed?' completed':''}" data-id="${task.id}" title="${task.completed?'Marcar como Pendiente':'Marcar como Completada'}">${task.completed?'❌':'✅'}</button>
+                        <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como Pendiente' : 'Marcar como Completada'}">${task.completed ? '❌' : '✅'}</button>
                         <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
-                        ${remBtn}
+                        ${remBtn}  // Si la tarea está completada, remBtn será una cadena vacía y no se renderizará el botón
                     </div>`;
-    el.addEventListener('click', (e)=>{ if(!e.target.closest('button')){selectedTaskId=task.id===selectedTaskId?null:task.id; renderTasks();}});
+    el.addEventListener('click', (e) => { if (!e.target.closest('button')) { selectedTaskId = task.id === selectedTaskId ? null : task.id; renderTasks(); } });
     let pressTimer;
-    const startPress = (e) => { if(!e.target.closest('button')) pressTimer = setTimeout(()=>handleLongPress(task), 500); };
+    const startPress = (e) => { if (!e.target.closest('button')) pressTimer = setTimeout(() => handleLongPress(task), 500); };
     const cancelPress = () => clearTimeout(pressTimer);
-    el.addEventListener('mousedown', startPress); el.addEventListener('touchstart', startPress);
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(evt=>el.addEventListener(evt, cancelPress));
+    el.addEventListener('mousedown', startPress);
+    el.addEventListener('touchstart', startPress);
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
     return el;
 }
 function handleLongPress(task) {
