@@ -351,9 +351,9 @@ function generateTasksDescription() {
             // Construir el detalle de la tarea
             let details = `Para: ${formattedDate}`;
             if (formattedDate !== 'Indefinido') {
-                details += ` | Restante: ${remainingTime}\n\n`;
+                details += ` | Restante: ${remainingTime}`;
             }
-            return `- ${task.name} (${details})`;
+            return `- ${task.name} (${details})\n\n`;
         }).join('\n');
     } else {
         tasksListString = "¡Felicidades! No hay tareas pendientes en este momento. ✨";
