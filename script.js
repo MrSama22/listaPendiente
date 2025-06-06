@@ -351,7 +351,7 @@ function generateTasksDescription() {
             // Construir el detalle de la tarea
             let details = `Para: ${formattedDate}`;
             if (formattedDate !== 'Indefinido') {
-                details += ` | Restante: ${remainingTime}`;
+                details += ` | Restante: ${remainingTime}\n\n`;
             }
             return `- ${task.name} (${details})`;
         }).join('\n');
