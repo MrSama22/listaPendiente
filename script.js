@@ -45,6 +45,11 @@ const saveGlobalReminderBtn = document.getElementById('saveGlobalReminderBtn');
 const individualTaskRemindersListUI = document.getElementById('individualTaskRemindersList');
 const noIndividualTaskRemindersMsg = document.getElementById('noIndividualTaskRemindersMsg');
 
+// ---- Dark Mode DOM Reference ----
+const darkModeStylesheet = document.getElementById('dark-mode-stylesheet');
+const darkModeToggle = document.getElementById('darkModeToggle');
+
+
 // ---- Google Calendar Configuration ----
 const GOOGLE_CONFIG = {
     CLIENT_ID: '66598008920-q6ggm6hm90tmbfi24t3cg86r8eb2uuh6.apps.googleusercontent.com',
@@ -61,6 +66,25 @@ let google;
 let isGoogleCalendarSignedIn = false;
 let currentUserId = null;
 let repeatingRemindersIntervalId = null; 
+
+// ---- Dark Mode Functions ----
+function setDarkMode(isDark) {
+    if (!darkModeStylesheet || !darkModeToggle) return;
+    
+    darkModeStylesheet.disabled = !isDark;
+    localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+    darkModeToggle.textContent = isDark ? 'Desactivar Modo Oscuro' : 'Activar Modo Oscuro';
+}
+
+function applyInitialTheme() {
+    const savedMode = localStorage.getItem('darkMode');
+    if (savedMode === 'enabled') {
+        setDarkMode(true);
+    } else {
+        setDarkMode(false);
+    }
+}
+
 
 // ---- Google API Call Wrapper for Authentication Handling ----
 async function makeAuthenticatedApiCall(apiCallFunction, operationName = 'Operación de Google Calendar') {
@@ -1011,6 +1035,17 @@ async function editTaskReminder(taskId) {
 
 // ---- 2. Event Listeners Iniciales ----
 document.addEventListener('DOMContentLoaded', () => {
+    // START: Dark Mode Listener
+    const darkModeToggleBtn = document.getElementById('darkModeToggle');
+    if (darkModeToggleBtn) {
+        darkModeToggleBtn.addEventListener('click', () => {
+            const isDarkModeEnabled = !document.getElementById('dark-mode-stylesheet').disabled;
+            setDarkMode(!isDarkModeEnabled);
+        });
+    }
+    applyInitialTheme();
+    // END: Dark Mode Listener
+
     const disconnectGCalBtn = document.getElementById('disconnectGoogleBtn'); 
     if (disconnectGCalBtn) disconnectGCalBtn.addEventListener('click', () => signOutFromGoogleCalendar());
     loginBtn.addEventListener('click', () => auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch(err => alert(err.message)));
