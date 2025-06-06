@@ -124,6 +124,11 @@ button.danger-btn:hover {
     color: #f5f5f5;
     border-color: #444;
 }
+.section-subheader{
+    background-color: rgb(0, 0, 0,0);
+    color:#f5f5f5ad ;
+}
+
 #forgotPasswordLink {
     color: #03a9f4;
 }
