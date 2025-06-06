@@ -996,3 +996,6 @@ ul.styled-list {
         align-items: stretch;
     }
 }
+.task-item.completed .task-info{
+    text-decoration :line-through;
+}
