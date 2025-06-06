@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Tareas</title>
     <link rel="stylesheet" href="style.css">
+    <link id="dark-mode-stylesheet" rel="stylesheet" href="style-dark.css" disabled>
     <link rel="icon" href="image-removebg-preview (11) (1).png">
 </head>
 <body>
@@ -151,7 +152,8 @@
             <div class="settings-sidebar">
                 <a href="#" data-target="settingsGoogleCalendarSection" class="active">📅 Calendario Google</a>
                 <a href="#" data-target="settingsTaskCleanupSection">🗑️ Limpieza de Tareas</a>
-            </div>
+                <a href="#" data-target="settingsAppearanceSection">🎨 Apariencia</a>
+                </div>
             <div class="settings-content">
                 <div id="settingsGoogleCalendarSection" class="settings-section">
                     <h3>Integración Google Calendar</h3>
@@ -206,7 +208,18 @@
                         <p class="settings-description">Configura la frecuencia con la que las tareas completadas se eliminarán automáticamente. La eliminación manual de todas las tareas completadas se encuentra en la página principal.</p>
                     </div>
                 </div>
-            </div>
+                
+                <div id="settingsAppearanceSection" class="settings-section" style="display:none;">
+                    <h3>Apariencia y Tema</h3>
+                    <div class="appearance-section-content">
+                        <div class="form-group">
+                            <label style="margin-bottom: 10px;">Modo Oscuro</label>
+                            <button id="darkModeToggle">Activar Modo Oscuro</button>
+                        </div>
+                        <p class="settings-description">Cambia entre el tema claro y oscuro para tu comodidad visual.</p>
+                    </div>
+                </div>
+                </div>
         </div>
     </div>
 
