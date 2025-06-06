@@ -335,16 +335,31 @@ async function removeUserGlobalReminderEventId(userId, eventId) {
     }, { merge: true });
 }
 
+/**
+ * Genera la descripción para los recordatorios de Google Calendar,
+ * incluyendo el tiempo restante para cada tarea.
+ */
 function generateTasksDescription() {
-    const pendingTasks = tasks.filter(t => !t.completed); 
+    const pendingTasks = tasks.filter(t => !t.completed);
     let tasksListString;
 
     if (pendingTasks.length > 0) {
-        tasksListString = pendingTasks.map(task => `- ${task.name} (Para: ${formatDate(task.dueDate)})`).join('\n');
+        tasksListString = pendingTasks.map(task => {
+            const formattedDate = formatDate(task.dueDate);
+            const remainingTime = getRemainingDays(task.dueDate);
+            
+            // Construir el detalle de la tarea
+            let details = `Para: ${formattedDate}`;
+            if (formattedDate !== 'Indefinido') {
+                details += ` | Restante: ${remainingTime}`;
+            }
+            return `- ${task.name} (${details})`;
+        }).join('\n');
     } else {
-        tasksListString = "No hay tareas pendientes en este momento.";
+        tasksListString = "¡Felicidades! No hay tareas pendientes en este momento. ✨";
     }
-    return `Resumen de tareas pendientes al ${new Date().toLocaleString()}:\n\n${tasksListString}\n\n--- Recordatorio global generado por Gestor de Tareas ---`;
+    
+    return `Resumen de Tareas Pendientes (actualizado ${new Date().toLocaleString()}):\n\n${tasksListString}\n\n--- Recordatorio generado por Gestor de Tareas ---`;
 }
 
 async function handleSaveGlobalReminderFromModal() {
