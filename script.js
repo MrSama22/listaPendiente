@@ -92,7 +92,7 @@ async function makeAuthenticatedApiCall(apiCallFunction, operationName = 'Operac
         isGoogleCalendarSignedIn = false;
         updateCalendarRelatedUI();
         stopRepeatingRemindersUpdateInterval();
-        //alert(`Debes conectarte a Google Calendar primero para realizar: ${operationName}.\nVe a Configuración para conectar.`);
+        alert(`Debes conectarte a Google Calendar primero para realizar: ${operationName}.\nVe a Configuración para conectar.`);
         throw new Error("Not signed into Google Calendar or token is missing from GAPI client.");
     }
     try {
