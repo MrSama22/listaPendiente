@@ -161,7 +161,7 @@ async function initializeGoogleCalendar() {
         if (isGoogleCalendarSignedIn && currentUserId) {
             renderGlobalRemindersList();
             renderIndividualTaskRemindersList();
-            await checkAndCleanUpOverdueTaskReminders(); // <<< ADDED: Check for overdue reminders
+            await checkAndCleanUpOverdueTaskReminders();
             startRepeatingRemindersUpdateInterval();
         }
 
@@ -179,7 +179,7 @@ function signInToGoogle() {
     const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CONFIG.CLIENT_ID,
         scope: GOOGLE_CONFIG.SCOPES,
-        callback: async (tokenResponse) => { // <<< Added async
+        callback: async (tokenResponse) => { 
             if (tokenResponse && tokenResponse.access_token) {
                 gapi.client.setToken(tokenResponse);
                 isGoogleCalendarSignedIn = true;
@@ -190,7 +190,7 @@ function signInToGoogle() {
                     renderGlobalRemindersList();
                     renderIndividualTaskRemindersList();
                     updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                    await checkAndCleanUpOverdueTaskReminders(); // <<< ADDED: Check for overdue reminders
+                    await checkAndCleanUpOverdueTaskReminders();
                     startRepeatingRemindersUpdateInterval(); 
                 }
             } else {
@@ -335,10 +335,6 @@ async function removeUserGlobalReminderEventId(userId, eventId) {
     }, { merge: true });
 }
 
-/**
- * Genera la descripción para los recordatorios de Google Calendar,
- * incluyendo el tiempo restante para cada tarea.
- */
 function generateTasksDescription() {
     const pendingTasks = tasks.filter(t => !t.completed);
     let tasksListString;
@@ -348,18 +344,17 @@ function generateTasksDescription() {
             const formattedDate = formatDate(task.dueDate);
             const remainingTime = getRemainingDays(task.dueDate);
             
-            // Construir el detalle de la tarea
             let details = `Para: ${formattedDate}`;
             if (formattedDate !== 'Indefinido') {
                 details += ` | Restante: ${remainingTime}`;
             }
-            return `- ${task.name} (${details})`;
-        }).join('\n\n');
+            return `- <span class="math-inline">\{task\.name\} \(</span>{details})`;
+        }).join('\n');
     } else {
         tasksListString = "¡Felicidades! No hay tareas pendientes en este momento. ✨";
     }
     
-    return `Resumen de Tareas Pendientes (actualizado ${new Date().toLocaleString()}):\n\n${tasksListString}\n\n--- Recordatorio generado por Gestor de Tareas ---`;
+    return `Resumen de Tareas Pendientes (actualizado <span class="math-inline">\{new Date\(\)\.toLocaleString\(\)\}\)\:\\n\\n</span>{tasksListString}\n\n--- Recordatorio generado por Gestor de Tareas ---`;
 }
 
 async function handleSaveGlobalReminderFromModal() {
@@ -460,7 +455,6 @@ async function handleSaveGlobalReminderFromModal() {
 
 async function updateAllNonRepeatingGlobalRemindersDescriptions(userId) {
     if (!userId || !isGoogleCalendarSignedIn || !gapi || !gapi.client || !gapi.client.calendar) {
-        console.log("Actualización de recordatorios globales NO RECURRENTES omitida: Se requiere inicio de sesión en Google Calendar y usuario.");
         return;
     }
     const eventIds = await getUserGlobalReminderEventIds(userId);
@@ -535,22 +529,104 @@ async function updateRepeatingGlobalRemindersDescriptions(userId) {
     }
 }
 
+
+// START: NEW FUNCTION FOR SILENT TOKEN REFRESH
+/**
+ * Intenta refrescar el token de acceso de Google de forma silenciosa.
+ */
+async function refreshTokenIfNeeded() {
+    if (!google || !google.accounts || !google.accounts.oauth2) {
+        console.warn("Librería de Google no está lista para refrescar token.");
+        return;
+    }
+
+    return new Promise((resolve) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CONFIG.CLIENT_ID,
+            scope: GOOGLE_CONFIG.SCOPES,
+            callback: (tokenResponse) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    gapi.client.setToken(tokenResponse);
+                    isGoogleCalendarSignedIn = true;
+                    localStorage.setItem('googleAccessToken', tokenResponse.access_token);
+                    console.log('Token de Google refrescado silenciosamente.');
+                } else {
+                    // Si falla silenciosamente, no hacemos nada drástico. 
+                    // El próximo `makeAuthenticatedApiCall` lo gestionará.
+                    console.warn('Fallo el refresco silencioso del token, no se recibió access_token.');
+                }
+                resolve();
+            },
+            error_callback: (error) => {
+                console.error("Error en el refresco silencioso del token:", error);
+                // Si el error indica que se requiere interacción, desconectamos al usuario lógicamente.
+                if (error && (error.type === 'popup_closed' || error.type === 'user_cancel' || error.type === 'access_denied')) {
+                    isGoogleCalendarSignedIn = false;
+                    localStorage.removeItem('googleAccessToken');
+                    updateCalendarRelatedUI();
+                    stopRepeatingRemindersUpdateInterval();
+                }
+                resolve();
+            }
+        });
+        // Usamos `prompt: 'none'` para el intento silencioso.
+        tokenClient.requestAccessToken({ prompt: 'none' });
+    });
+}
+// END: NEW FUNCTION
+
+// START: MODIFIED FUNCTION
+/**
+ * Inicia el intervalo para refrescar el token y actualizar los recordatorios 
+ * cada 30 minutos.
+ */
 function startRepeatingRemindersUpdateInterval() {
-    if (repeatingRemindersIntervalId) clearInterval(repeatingRemindersIntervalId); 
+    if (repeatingRemindersIntervalId) {
+        clearInterval(repeatingRemindersIntervalId); 
+    }
+    
     if (currentUserId && isGoogleCalendarSignedIn) {
-        updateRepeatingGlobalRemindersDescriptions(currentUserId);
-        repeatingRemindersIntervalId = setInterval(() => {
-            updateRepeatingGlobalRemindersDescriptions(currentUserId);
-        }, 10 * 60 * 1000); // 10 minutes
+        const thirtyMinutes = 30 * 60 * 1000;
+        
+        const periodicUpdate = async () => {
+            console.log(`Ejecutando actualización periódica de recordatorios... (${new Date().toLocaleTimeString()})`);
+            
+            // 1. Intenta refrescar el token de forma silenciosa primero.
+            await refreshTokenIfNeeded();
+            
+            // 2. Si después del intento de refresco seguimos conectados, actualiza las descripciones.
+            if (isGoogleCalendarSignedIn) {
+                // Actualizamos ambos tipos de recordatorios globales (recurrentes y no recurrentes)
+                await updateRepeatingGlobalRemindersDescriptions(currentUserId);
+                await updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+                console.log("Actualización de descripciones de recordatorios completada.");
+            } else {
+                console.log("Actualización periódica omitida: la sesión de Google Calendar ya no es válida.");
+            }
+        };
+
+        // Ejecutar una vez inmediatamente al iniciar
+        periodicUpdate();
+        
+        // Establecer el intervalo para que se ejecute cada 30 minutos
+        repeatingRemindersIntervalId = setInterval(periodicUpdate, thirtyMinutes);
+        
+        console.log(`Intervalo de actualización de recordatorios configurado para cada 30 minutos.`);
+
+    } else {
+        console.log('No se inicia el intervalo: se requiere usuario y conexión a Google Calendar.');
     }
 }
+// END: MODIFIED FUNCTION
 
 function stopRepeatingRemindersUpdateInterval() {
     if (repeatingRemindersIntervalId) {
         clearInterval(repeatingRemindersIntervalId);
         repeatingRemindersIntervalId = null;
+        console.log('Intervalo de actualización de recordatorios detenido.');
     }
 }
+
 
 function openGlobalReminderModalForCreate() {
     if (!isGoogleCalendarSignedIn) {
@@ -561,7 +637,7 @@ function openGlobalReminderModalForCreate() {
     editingGlobalEventIdInput.value = '';
     globalReminderSummaryInput.value = `Resumen de Tareas Pendientes (${new Date().toLocaleDateString()})`;
     const defaultDateTime = new Date(Date.now() + 60 * 60 * 1000); 
-    globalReminderDateTimeInput.value = `${defaultDateTime.getFullYear()}-${String(defaultDateTime.getMonth() + 1).padStart(2, '0')}-${String(defaultDateTime.getDate()).padStart(2, '0')}T${String(defaultDateTime.getHours()).padStart(2, '0')}:${String(defaultDateTime.getMinutes()).padStart(2, '0')}`;
+    globalReminderDateTimeInput.value = `<span class="math-inline">\{defaultDateTime\.getFullYear\(\)\}\-</span>{String(defaultDateTime.getMonth() + 1).padStart(2, '0')}-<span class="math-inline">\{String\(defaultDateTime\.getDate\(\)\)\.padStart\(2, '0'\)\}T</span>{String(defaultDateTime.getHours()).padStart(2, '0')}:${String(defaultDateTime.getMinutes()).padStart(2, '0')}`;
     globalReminderRepeatSelect.value = 'none';
     globalReminderModal.style.display = 'block';
 }
@@ -675,12 +751,12 @@ async function renderGlobalRemindersList() {
             }
             li.innerHTML = `
                 <div class="reminder-info">
-                    <span class="reminder-summary">${eventData.summary || '(Sin título)'}</span>
-                    <span class="reminder-time">${startDate ? startDate.toLocaleString() : 'Fecha no especificada'}</span>
-                    <span class="reminder-recurrence">Recurrencia: ${recurrenceText}</span>
-                </div>
-                <div class="reminder-actions">
-                    <button class="edit-global-reminder-btn" data-event-id="${eventId}" title="Editar Recordatorio Global">✏️</button>
+                    <span class="reminder-summary"><span class="math-inline">\{eventData\.summary \|\| '\(Sin título\)'\}</span\>
+<span class\="reminder\-time"\></span>{startDate ? startDate.toLocaleString() : 'Fecha no especificada'}</span>
+                    <span class="reminder-recurrence">Recurrencia: <span class="math-inline">\{recurrenceText\}</span\>
+</div\>
+<div class\="reminder\-actions"\>
+<button class\="edit\-global\-reminder\-btn" data\-event\-id\="</span>{eventId}" title="Editar Recordatorio Global">✏️</button>
                     <button class="delete-global-reminder-btn" data-event-id="${eventId}" title="Eliminar Recordatorio Global">🗑️</button>
                 </div>`;
             globalRemindersListUI.appendChild(li);
@@ -753,10 +829,10 @@ async function renderIndividualTaskRemindersList() {
                     <span class="reminder-summary">Tarea: ${task.name}</span>
                     <span class="task-due-date-info">Fecha Límite Tarea: ${formatDate(task.dueDate)}</span>
                     <span class="reminder-time">Recordatorio: ${startDate ? startDate.toLocaleString() : 'Fecha no especificada'}</span>
-                    <span class="reminder-recurrence">Recurrencia: ${recurrenceText}</span>
-                </div>
-                <div class="reminder-actions">
-                    <button class="edit-individual-task-reminder-btn" data-task-id="${task.id}" title="Editar Recordatorio de Tarea">✏️</button>
+                    <span class="reminder-recurrence">Recurrencia: <span class="math-inline">\{recurrenceText\}</span\>
+</div\>
+<div class\="reminder\-actions"\>
+<button class\="edit\-individual\-task\-reminder\-btn" data\-task\-id\="</span>{task.id}" title="Editar Recordatorio de Tarea">✏️</button>
                     <button class="delete-individual-task-reminder-btn" data-task-id="${task.id}" title="Eliminar Recordatorio de Tarea">🗑️</button>
                 </div>`;
             individualTaskRemindersListUI.appendChild(li);
@@ -788,18 +864,15 @@ async function renderIndividualTaskRemindersList() {
     document.querySelectorAll('.delete-individual-task-reminder-btn').forEach(button => button.addEventListener('click', (e) => removeTaskReminder(e.currentTarget.dataset.taskId, true)));
 }
 
-// ---- START: NEW FUNCTION TO CLEAN UP OVERDUE TASK REMINDERS ----
 async function checkAndCleanUpOverdueTaskReminders() {
     if (!currentUserId || !isGoogleCalendarSignedIn || !tasksCol || tasks.length === 0) {
-        console.log("Cleanup of overdue task reminders skipped: No user, GCal not signed in, or no tasks.");
         return;
     }
 
-    console.log("Checking for overdue task reminders to clean up...");
     let remindersCleaned = 0;
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    oneDayAgo.setHours(23, 59, 59, 999); // End of "more than 1 day ago"
+    oneDayAgo.setHours(23, 59, 59, 999);
 
     const tasksToProcess = tasks.filter(task => 
         task.googleCalendarEventId && 
@@ -811,33 +884,25 @@ async function checkAndCleanUpOverdueTaskReminders() {
     for (const task of tasksToProcess) {
         try {
             const taskDueDate = new Date(task.dueDate);
-            if (isNaN(taskDueDate.getTime())) continue; // Skip invalid due dates
+            if (isNaN(taskDueDate.getTime())) continue;
 
-            if (taskDueDate < oneDayAgo) { // Task is overdue by more than 1 day
-                console.log(`Task "${task.name}" (due: ${taskDueDate.toLocaleDateString()}) is overdue. Attempting to delete its GCal reminder ${task.googleCalendarEventId}.`);
+            if (taskDueDate < oneDayAgo) {
                 try {
                     await deleteGoogleCalendarEvent(task.googleCalendarEventId);
-                    // If successful, remove from DB
                     await updateTaskDB(task.id, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
                     const localTask = tasks.find(t => t.id === task.id);
                     if (localTask) delete localTask.googleCalendarEventId;
-                    console.log(`Successfully deleted overdue GCal reminder for task "${task.name}" and updated Firestore.`);
                     remindersCleaned++;
                 } catch (gcalError) {
                     if (gcalError.message && gcalError.message.includes("Google Authentication Error")) {
-                        // Auth error already handled by makeAuthenticatedApiCall, stop further processing
-                        console.warn("Google Auth error during overdue reminder cleanup. Stopping cleanup.");
                         return; 
                     } else if (gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410)) {
-                        // Event not found, means it's already deleted or never existed properly. Safe to remove from DB.
-                        console.log(`GCal reminder for task "${task.name}" not found (404/410). Removing reference from Firestore.`);
                         await updateTaskDB(task.id, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
                         const localTask = tasks.find(t => t.id === task.id);
                         if (localTask) delete localTask.googleCalendarEventId;
-                        remindersCleaned++; // Count as cleaned as the reference is removed
+                        remindersCleaned++;
                     } else {
                         console.error(`Failed to delete overdue GCal reminder for task "${task.name}":`, gcalError);
-                        // Don't remove from DB if GCal deletion failed for other reasons
                     }
                 }
             }
@@ -847,16 +912,12 @@ async function checkAndCleanUpOverdueTaskReminders() {
     }
 
     if (remindersCleaned > 0) {
-        console.log(`Cleaned up ${remindersCleaned} overdue task reminder(s).`);
-        renderTasks(); // Re-render tasks to update reminder buttons
+        renderTasks();
         if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
-            renderIndividualTaskRemindersList(); // Re-render settings list if open
+            renderIndividualTaskRemindersList();
         }
-    } else {
-        console.log("No overdue task reminders found to clean up.");
     }
 }
-// ---- END: NEW FUNCTION ----
 
 function showReminderConfigModal(task) {
     if (!isGoogleCalendarSignedIn) {
@@ -870,17 +931,17 @@ function showReminderConfigModal(task) {
         <div class="modal" id="${modalId}" style="display: block; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
             <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 5px;">
                 <span class="close-btn" onclick="this.closest('.modal').remove()">&times;</span>
-                <h3>Configurar Recordatorio para: ${task.name}</h3>
-                <label for="reminderDateTime">Fecha y hora del recordatorio:</label>
-                <input type="datetime-local" id="reminderDateTime" style="width: 95%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px;">
-                <label for="reminderRepeat">Repetición:</label>
-                <select id="reminderRepeat" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="none">Ninguna</option>
-                    <option value="daily">Diaria</option>
-                    <option value="weekly">Semanal</option>
-                    <option value="monthly">Mensual</option>
-                </select>
-                <button onclick="confirmAndSaveIndividualTaskReminder('${task.id}')" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; width: 100%; border-radius: 4px;">Guardar Recordatorio de Tarea</button>
+                <h3>Configurar Recordatorio para: <span class="math-inline">\{task\.name\}</h3\>
+<label for\="reminderDateTime"\>Fecha y hora del recordatorio\:</label\>
+<input type\="datetime\-local" id\="reminderDateTime" style\="width\: 95%; padding\: 10px; margin\: 10px 0; border\: 1px solid \#ccc; border\-radius\: 4px;"\>
+<label for\="reminderRepeat"\>Repetición\:</label\>
+<select id\="reminderRepeat" style\="width\: 100%; padding\: 10px; margin\: 10px 0; border\: 1px solid \#ccc; border\-radius\: 4px;"\>
+<option value\="none"\>Ninguna</option\>
+<option value\="daily"\>Diaria</option\>
+<option value\="weekly"\>Semanal</option\>
+<option value\="monthly"\>Mensual</option\>
+</select\>
+<button onclick\="confirmAndSaveIndividualTaskReminder\('</span>{task.id}')" style="background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; cursor: pointer; width: 100%; border-radius: 4px;">Guardar Recordatorio de Tarea</button>
             </div>
         </div>`;
     document.body.insertAdjacentHTML('beforeend', modalContent);
@@ -893,14 +954,14 @@ function showReminderConfigModal(task) {
             const defaultReminderTime = new Date(dueDate.getTime() - 15 * 60000); 
             let finalDefaultTime = defaultReminderTime;
             if (defaultReminderTime < new Date() && !task.googleCalendarEventId) finalDefaultTime = new Date(Date.now() + 15 * 60000); 
-            reminderDateTimeInput.value = `${finalDefaultTime.getFullYear()}-${String(finalDefaultTime.getMonth() + 1).padStart(2, '0')}-${String(finalDefaultTime.getDate()).padStart(2, '0')}T${String(finalDefaultTime.getHours()).padStart(2, '0')}:${String(finalDefaultTime.getMinutes()).padStart(2, '0')}`;
+            reminderDateTimeInput.value = `<span class="math-inline">\{finalDefaultTime\.getFullYear\(\)\}\-</span>{String(finalDefaultTime.getMonth() + 1).padStart(2, '0')}-<span class="math-inline">\{String\(finalDefaultTime\.getDate\(\)\)\.padStart\(2, '0'\)\}T</span>{String(finalDefaultTime.getHours()).padStart(2, '0')}:${String(finalDefaultTime.getMinutes()).padStart(2, '0')}`;
         } catch (e) {
             const nowPlus15 = new Date(Date.now() + 15 * 60000); 
-            reminderDateTimeInput.value = `${nowPlus15.getFullYear()}-${String(nowPlus15.getMonth() + 1).padStart(2, '0')}-${String(nowPlus15.getDate()).padStart(2, '0')}T${String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
+            reminderDateTimeInput.value = `<span class="math-inline">\{nowPlus15\.getFullYear\(\)\}\-</span>{String(nowPlus15.getMonth() + 1).padStart(2, '0')}-<span class="math-inline">\{String\(nowPlus15\.getDate\(\)\)\.padStart\(2, '0'\)\}T</span>{String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
         }
     } else {
         const nowPlus15 = new Date(Date.now() + 15 * 60000);
-        reminderDateTimeInput.value = `${nowPlus15.getFullYear()}-${String(nowPlus15.getMonth() + 1).padStart(2, '0')}-${String(nowPlus15.getDate()).padStart(2, '0')}T${String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
+        reminderDateTimeInput.value = `<span class="math-inline">\{nowPlus15\.getFullYear\(\)\}\-</span>{String(nowPlus15.getMonth() + 1).padStart(2, '0')}-<span class="math-inline">\{String\(nowPlus15\.getDate\(\)\)\.padStart\(2, '0'\)\}T</span>{String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
     }
 }
 
@@ -998,7 +1059,6 @@ async function removeTaskReminder(taskId, calledFromSettings = false) {
         alert('Esta tarea no tiene un recordatorio de Google Calendar asociado.');
     }
 }
-
 async function editTaskReminder(taskId) {
     if (!currentUserId) { alert("Debes estar autenticado."); return; }
     const task = tasks.find(t => t.id === taskId);
@@ -1382,14 +1442,14 @@ function showEditModal(taskId) {
     const timeContainer = modal.querySelector('#timeInputContainer');
     if (task.dueDate !== 'indefinido' && task.dueDate) {
         const d = new Date(task.dueDate);
-        dateInput.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        dateInput.value = `<span class="math-inline">\{d\.getFullYear\(\)\}\-</span>{String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         const hasTime = d.getHours()!==23 || d.getMinutes()!==59 || d.getSeconds() !== 59 ;
         includeTimeCb.checked = hasTime;
-        if(hasTime){ timeInput.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; timeContainer.style.display='block';}
+        if(hasTime){ timeInput.value = `<span class="math-inline">\{String\(d\.getHours\(\)\)\.padStart\(2,'0'\)\}\:</span>{String(d.getMinutes()).padStart(2,'0')}`; timeContainer.style.display='block';}
         else { timeInput.value = ''; timeContainer.style.display='none';}
     } else {
         const n = new Date();
-        dateInput.value = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+        dateInput.value = `<span class="math-inline">\{n\.getFullYear\(\)\}\-</span>{String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
         timeInput.value = ''; includeTimeCb.checked = false; timeContainer.style.display='none';
     }
     modal.style.display = 'block';
@@ -1523,12 +1583,12 @@ function createTaskElement(task) {
     let remIcon = '🔔'; let remTitle = "Crear recordatorio en Google Calendar";
     if(task.googleCalendarEventId) { remIcon='🗓️'; remTitle="Editar/Eliminar recordatorio existente de Google Calendar"; }
     const reminderButtonDisabled = task.completed || task.dueDate === 'indefinido' || !task.dueDate || !isGoogleCalendarSignedIn;
-    const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled style="display:none;"' : ''}>${remIcon}</button>`; // Hide if disabled for clarity
-    el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
-                    <div class="task-actions">
-                        <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
-                        <button class="toggle-status-button${task.completed?' completed':''}" data-id="${task.id}" title="${task.completed?'Marcar como Pendiente':'Marcar como Completada'}">${task.completed?'❌':'✅'}</button>
-                        <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
+    const remBtn = `<button class="calendar-reminder-btn" data-id="<span class="math-inline">\{task\.id\}" title\="</span>{remTitle}" <span class="math-inline">\{reminderButtonDisabled ? 'disabled style\="display\:none;"' \: ''\}\></span>{remIcon}</button>`; // Hide if disabled for clarity
+    el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} <span class="math-inline">\{remDays\}</div\>
+<div class\="task\-actions"\>
+<button class\="edit\-button" data\-id\="</span>{task.id}" title="Editar Tarea">✏️</button>
+                        <button class="toggle-status-button${task.completed?' completed':''}" data-id="<span class="math-inline">\{task\.id\}" title\="</span>{task.completed?'Marcar como Pendiente':'Marcar como Completada'}"><span class="math-inline">\{task\.completed?'❌'\:'✅'\}</button\>
+<button class\="delete\-button" data\-id\="</span>{task.id}" title="Eliminar Tarea">🗑️</button>
                         ${remBtn}
                     </div>`;
     el.addEventListener('click', (e)=>{ if(!e.target.closest('button')){selectedTaskId=task.id===selectedTaskId?null:task.id; renderTasks();}});
@@ -1619,8 +1679,8 @@ function addTasksToCalendarDay(dayEl, date) {
     .forEach(t=>{
         const taskEl=document.createElement('div'); taskEl.className='calendar-task'; taskEl.dataset.id=t.id;
         const td=new Date(t.dueDate); let timeS='';
-        if(td.getHours()!==23||td.getMinutes()!==59 || td.getSeconds() !== 59) timeS=`${String(td.getHours()).padStart(2,'0')}:${String(td.getMinutes()).padStart(2,'0')} - `;
-        taskEl.innerHTML=`<div class="calendar-task-time">${timeS}</div>${t.name}`;
+        if(td.getHours()!==23||td.getMinutes()!==59 || td.getSeconds() !== 59) timeS=`<span class="math-inline">\{String\(td\.getHours\(\)\)\.padStart\(2,'0'\)\}\:</span>{String(td.getMinutes()).padStart(2,'0')} - `;
+        taskEl.innerHTML=`<div class="calendar-task-time"><span class="math-inline">\{timeS\}</div\></span>{t.name}`;
         dayEl.appendChild(taskEl);
     });
 }
