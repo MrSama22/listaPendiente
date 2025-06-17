@@ -929,7 +929,7 @@ function showReminderConfigModal(task) {
     if (existingModal) existingModal.remove();
     const modalContent = `
         <div class="modal" id="${modalId}" style="display: block; position: fixed; z-index: 1002; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
-            <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 5px;">
+            <div class="modal-content">
                 <span class="close-btn" onclick="this.closest('.modal').remove()">&times;</span>
                 <h3>Configurar Recordatorio para: ${task.name}</h3>
                 <label for="reminderDateTime">Fecha y hora del recordatorio:</label>
