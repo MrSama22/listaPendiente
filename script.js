@@ -1351,6 +1351,7 @@ auth.onAuthStateChanged(async user => {
 });
 
 
+
 // ---- 4. Firestore (Tasks) ----
 let tasks = [];
 let tasksCol, unsubscribe;
