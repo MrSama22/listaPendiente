@@ -89,6 +89,8 @@ button.danger-btn:hover {
     background: #444;
     color: #e0e0e0;
     border: 1px solid #555;
+    /* --- AÑADIDO PARA MANTENER LA FLUIDEZ DE LA ANIMACIÓN --- */
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .command-help {
