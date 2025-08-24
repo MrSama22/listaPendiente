@@ -250,3 +250,39 @@ button.disconnect-gcal-btn:hover {
 .app-footer .copyright-text {
     color: #888;
 }
+/* --- AÑADE ESTO EN style-dark.css PARA LA ANIMACIÓN --- */
+
+/* Color de la línea de tachado en modo oscuro */
+.task-info::after {
+    background: #aaa;
+}
+
+/* Animación de completar en modo oscuro */
+.task-item.just-completed {
+    animation-name: completeAnimation-dark;
+}
+
+@keyframes completeAnimation-dark {
+    from {
+        transform: scale(1.05);
+        background-color: #1e1e1e; /* Color neutral oscuro */
+    }
+    to {
+        transform: scale(1);
+        background-color: #2a3b2a; /* Color final completado oscuro */
+    }
+}
+
+/* Animación de des-completar en modo oscuro */
+.task-item.just-uncompleted {
+    animation-name: uncompleteAnimation-dark;
+}
+
+@keyframes uncompleteAnimation-dark {
+    from {
+        background-color: #2a3b2a;
+    }
+    to {
+        background-color: #2a2a2a; /* Color de tarea pendiente oscuro */
+    }
+}
