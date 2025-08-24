@@ -1372,6 +1372,7 @@ let tasks = [];
 let tasksCol, unsubscribe;
 let currentEditingTaskId = null;
 let selectedTaskId = null;
+let justToggledId = null;
 
 function initTaskListeners(uid) {
     if (unsubscribe) unsubscribe();
@@ -1563,22 +1564,24 @@ function addTask() {
     clearForm();
 }
 
+// REEMPLAZA LA FUNCIÓN ANTIGUA CON ESTA
 function toggleTaskStatus(taskId) {
-    const task = tasks.find(t=>t.id===taskId);
-    if(task) {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+        justToggledId = taskId; // <-- AÑADIDO: Guardamos el ID de la tarea recién cambiada
         const newCompletedStatus = !task.completed;
-        updateTaskDB(taskId, {completed: newCompletedStatus})
-        .then(async () => { // <<< Added async
-            if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
-                if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
-                    renderIndividualTaskRemindersList();
+        updateTaskDB(taskId, { completed: newCompletedStatus })
+            .then(async () => { // <<< Added async
+                if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
+                    if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
+                        renderIndividualTaskRemindersList();
+                    }
+                    updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+                    if (newCompletedStatus && task.googleCalendarEventId) { // If task completed, check if its reminder is now overdue (relative to due date)
+                        await checkAndCleanUpOverdueTaskReminders(); // Check if completing it makes it eligible for cleanup
+                    }
                 }
-                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                if (newCompletedStatus && task.googleCalendarEventId) { // If task completed, check if its reminder is now overdue (relative to due date)
-                    await checkAndCleanUpOverdueTaskReminders(); // Check if completing it makes it eligible for cleanup
-                }
-            }
-        });
+            });
     }
 }
 
@@ -1635,18 +1638,36 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('es-ES', opts);
 }
 function createTaskElement(task) {
-    const el=document.createElement('div');
-    el.className=`task-item${task.completed?' completed':''}${selectedTaskId===task.id?' selected':''}`;
-    el.tabIndex=0; el.dataset.id=task.id;
-    const remDays = !task.completed && task.dueDate!=='indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
-    let remIcon = '🔔'; let remTitle = "Crear recordatorio en Google Calendar";
-    if(task.googleCalendarEventId) { remIcon='🗓️'; remTitle="Editar/Eliminar recordatorio existente de Google Calendar"; }
+    const el = document.createElement('div');
+    el.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
+    el.tabIndex = 0;
+    el.dataset.id = task.id;
+
+    if (task.id === justToggledId) {
+        // Añade una clase para la animación y la quita cuando la animación termina
+        el.classList.add(task.completed ? 'just-completed' : 'just-uncompleted');
+        setTimeout(() => {
+            const freshEl = document.querySelector(`.task-item[data-id="${task.id}"]`);
+            if (freshEl) {
+                freshEl.classList.remove('just-completed', 'just-uncompleted');
+            }
+            justToggledId = null; // Limpia la variable
+        }, 500); // La duración debe coincidir con la animación en CSS
+    }
+
+    const remDays = !task.completed && task.dueDate !== 'indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
+    let remIcon = '🔔';
+    let remTitle = "Crear recordatorio en Google Calendar";
+    if (task.googleCalendarEventId) {
+        remIcon = '🗓️';
+        remTitle = "Editar/Eliminar recordatorio existente de Google Calendar";
+    }
     const reminderButtonDisabled = task.completed || task.dueDate === 'indefinido' || !task.dueDate || !isGoogleCalendarSignedIn;
     const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled style="display:none;"' : ''}>${remIcon}</button>`; // Hide if disabled for clarity
     el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
-                        <button class="toggle-status-button${task.completed?' completed':''}" data-id="${task.id}" title="${task.completed?'Marcar como Pendiente':'Marcar como Completada'}">${task.completed?'❌':'✅'}</button>
+                        <button class="toggle-status-button${task.completed ? ' completed' : ''}" data-id="${task.id}" title="${task.completed ? 'Marcar como Pendiente' : 'Marcar como Completada'}">${task.completed ? '❌' : '✅'}</button>
                         <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
                         ${remBtn}
                     </div>`;
@@ -1670,10 +1691,13 @@ function createTaskElement(task) {
         });
     });
     let pressTimer;
-    const startPress = (e) => { if(!e.target.closest('button')) pressTimer = setTimeout(()=>handleLongPress(task), 500); };
+    const startPress = (e) => {
+        if (!e.target.closest('button')) pressTimer = setTimeout(() => handleLongPress(task), 500);
+    };
     const cancelPress = () => clearTimeout(pressTimer);
-    el.addEventListener('mousedown', startPress); el.addEventListener('touchstart', startPress);
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(evt=>el.addEventListener(evt, cancelPress));
+    el.addEventListener('mousedown', startPress);
+    el.addEventListener('touchstart', startPress);
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
     return el;
 }
 function handleLongPress(task) {
