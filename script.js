@@ -1321,6 +1321,18 @@ auth.onAuthStateChanged(async user => {
         // La UI se actualiza inmediatamente
         updateCalendarRelatedUI();
 
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Verifica si el usuario NO está conectado a Google Calendar y si no se le ha preguntado en esta sesión.
+        if (!isGoogleCalendarSignedIn && !sessionStorage.getItem('googleSignInPrompted')) {
+            // Muestra un mensaje de confirmación amigable.
+            if (confirm("Para sincronizar tareas y crear recordatorios, ¿deseas conectar tu cuenta de Google Calendar ahora?")) {
+                signInToGoogle();
+            }
+            // Marca que ya se le ha preguntado en esta sesión para no volver a molestar en cada recarga.
+            sessionStorage.setItem('googleSignInPrompted', 'true');
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
+
         if (isGoogleCalendarSignedIn) {
             // ----> NUEVO: Llama al refresco inteligente al cargar la sesión <----
             proactiveGoogleTokenRefresh();
@@ -1340,6 +1352,10 @@ auth.onAuthStateChanged(async user => {
         if (typeof unsubscribe === 'function') { unsubscribe(); unsubscribe = null; }
         tasks = [];
         stopRepeatingRemindersUpdateInterval();
+        
+        // --- AÑADIDO: Limpiar la bandera de sesión al cerrar sesión ---
+        sessionStorage.removeItem('googleSignInPrompted');
+
         // No es necesario cerrar la sesión de GCal si Firebase se desconecta.
         // El usuario puede gestionar la conexión de GCal de forma independiente.
         updateCalendarRelatedUI();
@@ -1349,7 +1365,6 @@ auth.onAuthStateChanged(async user => {
         if (document.getElementById('autoDeleteFrequency')) document.getElementById('autoDeleteFrequency').value = 'never';
     }
 });
-
 
 
 // ---- 4. Firestore (Tasks) ----
