@@ -75,26 +75,34 @@ button:disabled {
     background-color: #a9c8df;
     border-radius: 10px;
 }
+/* --- INICIO DE MODIFICACIONES --- */
 .task-actions {
     position: absolute;
     right: 10px;
     top: 50%;
-    transform: translateY(-50%) translateX(40px);
+    transform: translateY(-50%); /* Mantenemos el centrado vertical */
     display: flex;
-    background:rgb(0,0,0,0);
+    background: rgb(0,0,0,0);
     border-radius: 20px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s, transform 0.25s;
+    transition: opacity 0.15s ease-in; /* Hacemos que el contenedor se desvanezca un poco más rápido */
     z-index: 5;
     padding: 1px;
 }
 .task-item.selected .task-actions {
     opacity: 1;
     pointer-events: auto;
-    transform: translateY(-50%) translateX(0);
+    transform: translateY(-50%); /* El contenedor ya no se desliza */
 }
+
+/* Estado inicial de los botones: invisibles y desplazados a la derecha */
 .task-actions button {
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+
+    /* Estilos originales de los botones */
     width: 36px;
     height: 36px;
     padding: 0;
@@ -107,11 +115,37 @@ button:disabled {
     background: rgb(214, 165, 73);
     color: #333;
     border: 1px solid #eee;
-    transition: transform 0.2s, background-color 0.2s;
 }
+
+/* Estado final de los botones cuando la tarea está seleccionada */
+.task-item.selected .task-actions button {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Retrasos escalonados para el efecto de despliegue */
+.task-item.selected .task-actions .calendar-reminder-btn {
+    transition-delay: 0s;
+}
+.task-item.selected .task-actions .delete-button {
+    transition-delay: 0.07s;
+}
+.task-item.selected .task-actions .toggle-status-button {
+    transition-delay: 0.14s;
+}
+.task-item.selected .task-actions .edit-button {
+    transition-delay: 0.21s;
+}
+
+/* Ajuste para el efecto hover */
 .task-actions button:hover {
     transform: scale(1.1);
 }
+.task-item.selected .task-actions button:hover {
+    transform: scale(1.1) translateX(0);
+}
+/* --- FIN DE MODIFICACIONES --- */
+
 .task-actions .edit-button {
     color: white;
     background: #2196F3;
