@@ -3,290 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Tareas</title>
+    <title>Bienvenido al Gestor de Tareas</title>
     <link rel="stylesheet" href="style.css">
     <link id="dark-mode-stylesheet" rel="stylesheet" href="style-dark.css" disabled>
     <link rel="icon" href="image-removebg-preview (11) (1).png">
+    <!-- Es importante que añadas tu etiqueta de verificación de Google aquí si no lo has hecho -->
+    <!-- <meta name="google-site-verification" content="TU_CODIGO_DE_VERIFICACION" /> -->
+    <style>
+        /* Estilos específicos para la página de bienvenida */
+        .landing-body {
+            background-color: #f4f7f6;
+            color: #333;
+            text-align: center;
+        }
+        .hero {
+            padding: 50px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 0 0 20px 20px;
+        }
+        .hero h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+        }
+        .hero p {
+            font-size: 1.3em;
+            margin-bottom: 30px;
+        }
+        .cta-button {
+            background-color: #FF9800;
+            color: white;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.3s, transform 0.3s;
+            display: inline-block;
+        }
+        .cta-button:hover {
+            background-color: #F57C00;
+            transform: translateY(-3px);
+        }
+        .features {
+            padding: 40px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+        }
+        .feature-card {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            width: 100%;
+            max-width: 320px;
+        }
+        .feature-card h3 {
+            color: #4CAF50;
+            border-bottom: none;
+            font-size: 1.5em;
+        }
+        .feature-card p {
+            font-size: 1em;
+            color: #555;
+        }
+    </style>
 </head>
-<body>
-    <div id="authBox" class="container">
-    <h2>Iniciar sesión</h2>
-    <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su contraseña que desea establecer </p>
+<body class="landing-body">
 
-    <div class="form-group">
-        <input id="email" type="email" placeholder="Correo electrónico" required>
-    </div>
-    <div class="form-group">
-        <input id="password" type="password" placeholder="Contraseña" required>
-    </div>
-
-    <div class="form-group">
-        <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu contraseña?</a>
-    </div>
-
-    <button id="loginBtn">Iniciar Sesión</button>
-    <button id="registerBtn" class="secondary">Registrarse</button>
-
-    <p class="anuncio">-</p>
-</div>
-
-    <div id="appBox" class="container" style="display:none">
-        <div class="header-container">
-            <h2>Gestor de Tareas</h2>
-            <div>
-                <button id="settingsBtn" class="settings-icon-btn" title="Configuración">⚙️</button>
-                <button id="logoutBtn" class="logout">Cerrar Sesión</button>
-            </div>
+    <div class="container">
+        <div class="hero">
+            <h1>Gestor de Tareas Inteligente</h1>
+            <p>Tu asistente personal para organizar el día a día de forma sencilla y eficaz.</p>
+            <a href="login.html" class="cta-button">Empezar Ahora</a>
         </div>
 
-        <div class="command-help">
-            <p><strong>Comandos disponibles:</strong></p>
-            <div class="command-example copy-group">
-                <span>- crea una tarea llamada [nombre] para mañana</span>
-                <button class="copy-btn" title="Copiar">📋</button>
+        <div class="features">
+            <div class="feature-card">
+                <h3>📝 Creación Rápida</h3>
+                <p>Añade tareas usando lenguaje natural. Simplemente escribe lo que necesitas hacer y nosotros lo organizamos por ti.</p>
             </div>
-            <div class="command-example copy-group">
-                <span>- crea una tarea llamada [nombre] para hoy a las 18:00</span>
-                <button class="copy-btn" title="Copiar">📋</button>
+            <div class="feature-card">
+                <h3>📅 Vista de Calendario</h3>
+                <p>Visualiza todas tus tareas en un calendario interactivo. Planifica tu semana o mes de un solo vistazo.</p>
             </div>
-            <div class="command-example copy-group">
-                <span>- crea una tarea llamada [nombre] para el 19 de septiembre</span>
-                <button class="copy-btn" title="Copiar">📋</button>
+            <div class="feature-card">
+                <h3>🔔 Recordatorios Inteligentes</h3>
+                <p>Integra tus tareas con Google Calendar para recibir notificaciones y no olvidar nunca una fecha límite importante.</p>
             </div>
-            <div class="command-example copy-group">
-                <span>- nueva tarea [nombre] para el martes de esta semana</span>
-                <button class="copy-btn" title="Copiar">📋</button>
-            </div>
-            <p><strong>Ejemplos:</strong></p>
-            <div class="command-example copy-group">
-                <span>crea una tarea llamada comprar pan para mañana</span>
-                <button class="copy-btn" title="Copiar">📋</button>
-            </div>
-            <div class="command-example copy-group">
-                <span>crea una tarea llamada enviar correo para hoy a las 16:30</span>
-                <button class="copy-btn" title="Copiar">📋</button>
-            </div>
-            <div class="command-example copy-group">
-                <span>crea una tarea llamada cita para el 19 de septiembre</span>
-                <button class="copy-btn" title="Copiar">📋</button>
-            </div>
-        </div>
-
-        <p class="opciones">Opción 1</p>
-        <div class="form-group">
-            <label for="commandInput">Comando rápido:</label>
-            <div class="command-input-group">
-                <input type="text" id="commandInput" class="command-input"
-                    placeholder="Ejemplo: crea una tarea llamada comprar pan para mañana">
-                <button class="add-task-button">Añadir tarea</button>
-            </div>
-        </div>
-
-        <p class="opciones">Opción 2</p>
-        <div class="form-group">
-            <label for="taskName">Nombre de la tarea:</label>
-            <input type="text" id="taskName" required>
-        </div>
-
-        <div class="form-group">
-            <label for="taskDate">Fecha (opcional):</label>
-            <input type="date" id="taskDate">
-        </div>
-
-        <div class="form-group">
-            <label for="taskTime">Hora (opcional):</label>
-            <input type="time" id="taskTime">
-        </div>
-
-        <button class="add-task">Añadir Tarea</button>
-        <p class="vacio" style="padding-bottom: 1px;">
-                
-        </p>
-        <p class="tittle">LISTA DE TAREAS</p>
-
-        <div class="completed-tasks-controls">
-            <button id="deleteCompletedBtn" class="danger-btn" disabled>Eliminar Todas Las Tareas Completadas</button>
-            <button id="settingsBtn1" class="settings-icon-btn" title="Configuración">⚙️</button>
-
-            
-        </div>
-
-
-        <div class="task-list">
-            <h3 class="section-header">Tareas Completadas:</h3>
-            <div id="completedTasks"></div>
-
-            <h3 class="section-header">Tareas Pendientes:</h3>
-            <div id="pendingTasks">
-
-                <h4 class="section-subheader">- Con Fecha</h4>
-                <div id="datedTasks"></div>
-
-                <h4 class="section-subheader">- Sin Fecha</h4>
-                <div id="undefinedTasks"></div>
-
-            </div>
-        </div>
-
-        <p class="tittle">CALENDARIO DE TAREAS</p>
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <button id="prevMonth">&#10094;</button>
-                <h3 id="currentMonthYear"></h3>
-                <button id="nextMonth">&#10095;</button>
-            </div>
-            <div class="weekdays">
-                <div>Lun</div>
-                <div>Mar</div>
-                <div>Mié</div>
-                <div>Jue</div>
-                <div>Vie</div>
-                <div>Sáb</div>
-                <div>Dom</div>
-            </div>
-            <div id="calendar" class="calendar-grid"></div>
         </div>
     </div>
 
-    <div id="settingsPage" class="container settings-page-container" style="display:none;">
-        <div class="settings-header">
-            <h2>Configuración</h2>
-            <button id="closeSettingsBtn" class="secondary">Volver a Tareas</button>
-        </div>
-        <div class="settings-main-content">
-            <div class="settings-sidebar">
-                <a href="#" data-target="settingsGoogleCalendarSection" class="active">📅 Calendario Google</a>
-                <a href="#" data-target="settingsTaskCleanupSection">🗑️ Limpieza de Tareas</a>
-                <a href="#" data-target="settingsAppearanceSection">🎨 Apariencia</a>
-                </div>
-            <div class="settings-content">
-                <div id="settingsGoogleCalendarSection" class="settings-section">
-                    <h3>Integración Google Calendar</h3>
-                    <div class="google-calendar-section-content">
-                        <div class="calendar-controls">
-                            <button id="connectGoogleBtn" class="calendar-btn">
-                                📅 Conectar Google Calendar
-                            </button>
-                            <button id="disconnectGoogleBtn" class="calendar-btn disconnect-gcal-btn" style="margin-top: 10px; display: none;">
-                                🔌 Desconectar Google Calendar
-                            </button>
-                        </div>
-                         <p class="settings-description">Conecta tu cuenta de Google Calendar para sincronizar tareas y crear recordatorios. Si estás conectado, puedes optar por desconectar tu cuenta.</p>
-                    </div>
-                    <hr style="margin: 25px 0;">
-
-                    <h4>Mis Recordatorios Globales</h4>
-                    <div id="globalRemindersListContainer">
-                        <p id="noGlobalRemindersMsg" style="display: none;">No has creado recordatorios globales personalizados.</p>
-                        <ul id="globalRemindersList" class="styled-list">
-                            </ul>
-                    </div>
-                    <button id="addNewGlobalReminderBtn" class="calendar-btn" style="margin-top: 15px;" disabled>
-                        ➕ Crear Nuevo Recordatorio Global
-                    </button>
-                    <p class="settings-description">Crea recordatorios generales en tu Google Calendar para resúmenes de tareas o eventos importantes. Puedes editarlos o eliminarlos desde esta lista.</p>
-
-                    <hr style="margin: 25px 0;">
-
-                    <h4>Mis Recordatorios de Tareas</h4>
-                    <div id="individualTaskRemindersListContainer">
-                        <p id="noIndividualTaskRemindersMsg" style="display: none;">No hay recordatorios de tareas individuales o no estás conectado a Google Calendar.</p>
-                        <ul id="individualTaskRemindersList" class="styled-list">
-                        </ul>
-                    </div>
-                    <p class="settings-description">Estos son los recordatorios específicos para tus tareas que están en Google Calendar. Puedes editarlos o eliminarlos desde aquí.</p>
-
-                </div>
-
-                <div id="settingsTaskCleanupSection" class="settings-section" style="display:none;">
-                    <h3>Opciones de Limpieza de Tareas</h3>
-                    <div class="task-cleanup-section-content">
-                        <div class="form-group">
-                            <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
-                            <select id="autoDeleteFrequency">
-                                <option value="never" selected>Nunca</option>
-                                <option value="daily">Día</option>
-                                <option value="weekly">Semana</option>
-                                <option value="monthly">Mes</option>
-                            </select>
-                        </div>
-                        <p class="settings-description">Configura la frecuencia con la que las tareas completadas se eliminarán automáticamente. La eliminación manual de todas las tareas completadas se encuentra en la página principal.</p>
-                    </div>
-                </div>
-                
-                <div id="settingsAppearanceSection" class="settings-section" style="display:none;">
-                    <h3>Apariencia y Tema</h3>
-                    <div class="appearance-section-content">
-                        <div class="form-group">
-                            <label style="margin-bottom: 10px;">Modo Oscuro</label>
-                            <button id="darkModeToggle">Activar Modo Oscuro</button>
-                        </div>
-                        <p class="settings-description">Cambia entre el tema claro y oscuro para tu comodidad visual.</p>
-                    </div>
-                </div>
-                </div>
-        </div>
-    </div>
-
-
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h3>Editar Tarea</h3>
-            <div class="form-group">
-                <label for="editTaskName">Nombre de la tarea:</label>
-                <input type="text" id="editTaskName" required>
-            </div>
-            <div class="form-group">
-                <label for="editDate">Fecha (opcional):</label>
-                <input type="date" id="editDate">
-            </div>
-            <div class="include-time-checkbox">
-                <input type="checkbox" id="includeTime">
-                <label for="includeTime">Incluir hora específica</label>
-            </div>
-            <div class="form-group" id="timeInputContainer" style="display: none;">
-                <label for="editTime">Hora:</label>
-                <input type="time" id="editTime">
-            </div>
-            <button class="save-task" type="button">Guardar</button>
-        </div>
-    </div>
-
-    <div class="modal" id="globalReminderModal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h3 id="globalReminderModalTitle">Crear Recordatorio Global</h3>
-            <input type="hidden" id="editingGlobalEventId" value="">
-
-            <label for="globalReminderSummary">Título del Recordatorio:</label>
-            <input type="text" id="globalReminderSummary" placeholder="Ej: Revisar Tareas Pendientes">
-
-            <label for="globalReminderDateTime">Fecha y hora:</label>
-            <input type="datetime-local" id="globalReminderDateTime">
-
-            <label for="globalReminderRepeat">Repetición:</label>
-            <select id="globalReminderRepeat">
-                <option value="none">Ninguna</option>
-                <option value="daily">Diaria</option>
-                <option value="weekly">Semanal</option>
-                <option value="monthly">Mensual</option>
-            </select>
-
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button id="saveGlobalReminderBtn">Guardar Recordatorio</button>
-                <button type="button" class="secondary close-btn-modal">Cancelar</button> </div>
-        </div>
-    </div>
-
-
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
-
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client"></script>
-    <script type="module" src="script.js"></script>
     <footer class="app-footer">
         <div class="footer-content">
             <p class="footer-links">
@@ -294,7 +103,7 @@
                 <a href="terms_of_service.html" target="_blank">Condiciones del Servicio</a>
             </p>
             <p class="copyright-text">&copy; <span id="currentYear"></span> Task Manager. Todos los derechos reservados.</p>
-            </div>
+        </div>
     </footer>
     <script>
         document.getElementById('currentYear').textContent = new Date().getFullYear();
