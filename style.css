@@ -962,6 +962,26 @@ ul.styled-list {
 .task-item.just-uncompleted {
     animation: uncompleteAnimation 0.5s ease-out forwards;
 }
+/* --- AÑADE ESTO PARA LA ANIMACIÓN DE NUEVA TAREA --- */
+
+/* Animación cuando se añade una tarea */
+@keyframes addTaskAnimation {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+        background-color: #a8e6cf; /* Un verde menta suave para el efecto "flash" */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        /* El color de fondo final será el normal de la tarea */
+    }
+}
+
+/* Clase que activa la animación de añadir tarea */
+.task-item.just-added {
+    animation: addTaskAnimation 0.6s ease-out forwards;
+}
 @media (max-width: 800px) {
     .header-container {
         flex-direction: column;
@@ -1015,13 +1035,53 @@ ul.styled-list {
     .command-input-group {
         flex-direction: column;
     }
-    .task-actions {
-        right: 5px;
-        background-color: #FFF;
-    }
+.task-actions {
+    /* Posicionamiento (esto ya lo tenías bien) */
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    display: flex;
+    z-index: 5;
+
+    /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
+
+    /* 1. Fondo semitransparente (usamos un blanco sutil) */
+    background: rgba(255, 255, 255, 0.3);
+
+    /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); /* Para Safari */
+
+    /* 3. Borde sutil y redondeado */
+    border-radius: 50px; /* Bordes bien redondeados para un look moderno */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    /* 4. Sombra para dar profundidad */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
     .task-item.completed.selected .task-actions{
-        background-color: #FFF;
-    }
+         position: absolute;
+    right: 10px;
+    top: 50%;
+    display: flex;
+    z-index: 5;
+
+    /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
+
+    /* 1. Fondo semitransparente (usamos un blanco sutil) */
+    background: rgba(255, 255, 255, 0.3);
+
+    /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); /* Para Safari */
+
+    /* 3. Borde sutil y redondeado */
+    border-radius: 50px; /* Bordes bien redondeados para un look moderno */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    /* 4. Sombra para dar profundidad */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
     .task-actions button {
         width: 32px;
         height: 32px;
@@ -1089,3 +1149,4 @@ ul.styled-list {
 }
 /*.task-item.completed .task-info{
     /*text-decoration :line-through;}*/
+    
