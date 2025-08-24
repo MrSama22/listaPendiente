@@ -1650,7 +1650,25 @@ function createTaskElement(task) {
                         <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
                         ${remBtn}
                     </div>`;
-    el.addEventListener('click', (e)=>{ if(!e.target.closest('button')){selectedTaskId=task.id===selectedTaskId?null:task.id; renderTasks();}});
+    // CÓDIGO NUEVO (REEMPLAZAR EL ANTERIOR)
+    el.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return; // Ignora clics en los botones de acción
+
+        const currentId = el.dataset.id;
+        const isCurrentlySelected = selectedTaskId === currentId;
+
+        // Actualiza la variable que guarda el ID de la tarea seleccionada
+        selectedTaskId = isCurrentlySelected ? null : currentId;
+
+        // En lugar de llamar a renderTasks(), actualizamos las clases directamente
+        document.querySelectorAll('.task-item').forEach(item => {
+            if (item.dataset.id === selectedTaskId) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    });
     let pressTimer;
     const startPress = (e) => { if(!e.target.closest('button')) pressTimer = setTimeout(()=>handleLongPress(task), 500); };
     const cancelPress = () => clearTimeout(pressTimer);
