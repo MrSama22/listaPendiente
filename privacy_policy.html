@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad - Gestor de Tareas</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.7; margin: 0; padding: 20px; background-color: #f8f9fa; color: #343a40; }
+        .container { max-width: 800px; margin: auto; background-color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { color: #212529; text-align: center; border-bottom: 2px solid #4CAF50; padding-bottom: 15px; margin-bottom: 20px; }
+        h2 { color: #343a40; margin-top: 30px; }
+        p, ul, li { color: #495057; }
+        ul { list-style-type: disc; padding-left: 25px; }
+        strong { color: #212529; }
+        code { background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; font-family: "SF Mono", "Courier New", monospace; }
+        .scope-box { background-color: #e8f5e9; border-left: 4px solid #4CAF50; padding: 15px; margin-top: 15px; border-radius: 4px; }
+        .footer-link { display: block; text-align: center; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Política de Privacidad de "Gestor de Tareas"</h1>
+        <p><strong>Última actualización:</strong> 24 de agosto de 2025</p>
+
+        <p>Bienvenido a Gestor de Tareas (la "Aplicación"). Tu privacidad es fundamental para nosotros. Esta Política de Privacidad explica de manera exhaustiva cómo accedemos, usamos, almacenamos y compartimos los datos de los usuarios, con un enfoque especial en los datos obtenidos a través de los servicios de Google.</p>
+
+        <h2>1. Datos que Recopilamos</h2>
+        <p>Para proporcionar el servicio, recopilamos dos tipos principales de información:</p>
+        <ul>
+            <li><strong>Información de la cuenta:</strong> Cuando te registras, recopilamos tu dirección de correo electrónico y un identificador de usuario único proporcionado por el sistema de autenticación de Google (Firebase Authentication).</li>
+            <li><strong>Datos de Tareas:</strong> Cualquier información que ingreses en la aplicación, como el nombre de la tarea, fechas de vencimiento y estado de finalización.</li>
+        </ul>
+
+        <h2>2. Cómo Accedemos y Usamos los Datos de Google</h2>
+        <p>Nuestra aplicación utiliza los servicios de Google para funcionar. A continuación, detallamos qué datos de Google usamos y por qué:</p>
+        
+        <div class="scope-box">
+            <h3>Autenticación de Google (Firebase Authentication)</h3>
+            <p><strong>¿Qué datos usamos?:</strong> Tu perfil básico de Google (correo electrónico y un ID de usuario único) para crear y gestionar tu cuenta de forma segura.</p>
+            <p><strong>¿Para qué los usamos?:</strong> Para identificarte de forma segura, proteger tus tareas y asegurar que solo tú puedas acceder a ellas.</p>
+        </div>
+
+        <div class="scope-box">
+            <h3>API de Google Calendar</h3>
+            <p>Para la función de recordatorios, solicitamos tu permiso para acceder a tu Google Calendar. Este es el permiso específico que solicitamos:</p>
+            <ul>
+                <li><code>https://www.googleapis.com/auth/calendar</code>: Permiso completo para gestionar eventos.</li>
+            </ul>
+            <p><strong>¿Cómo usamos este permiso de forma específica?:</strong></p>
+            <ul>
+                <li><strong>Acceso:</strong> Solo accedemos a tu calendario para crear, modificar o eliminar eventos que la propia aplicación ha generado como recordatorios para tus tareas.</li>
+                <li><strong>Uso:</strong> El único propósito es añadir recordatorios en las fechas que tú elijas. <strong>No leemos, analizamos ni recopilamos información sobre tus eventos personales existentes.</strong></li>
+                <li><strong>Almacenamiento:</strong> Almacenamos el ID del evento de Google Calendar asociado a una tarea en nuestra base de datos (Firebase Firestore) para poder modificarlo o eliminarlo si cambias la tarea. No almacenamos ningún otro dato de tu calendario.</li>
+                <li><strong>Compartir:</strong> No compartimos los datos de tu calendario con ningún tercero. El acceso es exclusivo para la funcionalidad de recordatorios.</li>
+            </ul>
+        </div>
+
+        <h2>3. Almacenamiento y Seguridad de los Datos</h2>
+        <p>Tus datos (cuenta y tareas) se almacenan de forma segura en **Firebase Firestore**, una base de datos en la nube proporcionada por Google. Utilizamos las reglas de seguridad de Firebase para garantizar que solo tú, como usuario autenticado, puedas leer y escribir tus propias tareas. Todos los datos en tránsito entre la aplicación y los servidores de Firebase están encriptados.</p>
+
+        <h2>4. Retención y Eliminación de Datos</h2>
+        <p>Conservamos tus datos mientras mantengas una cuenta activa en nuestra aplicación. Si eliminas una tarea, se borra permanentemente de nuestra base de datos. Si deseas eliminar tu cuenta y todos tus datos asociados, puedes contactarnos en el correo electrónico que se proporciona a continuación y procesaremos tu solicitud.</p>
+
+        <h2>5. Tus Derechos y Control</h2>
+        <p>Tienes control total sobre tus datos. Puedes añadir, modificar y eliminar tus tareas en cualquier momento desde la interfaz de la aplicación.</p>
+
+        <h2>6. Contacto</h2>
+        <p>Si tienes alguna pregunta sobre esta Política de Privacidad o sobre cómo manejamos tus datos, no dudes en contactarnos:</p>
+        <p><strong>Correo electrónico:</strong> <a href="mailto:jhulianguerrero101010@gmail.com">jhulianguerrero101010@gmail.com</a></p>
+
+        <a href="index.html" class="footer-link">Volver a la página principal</a>
+    </div>
+</body>
+</html>
