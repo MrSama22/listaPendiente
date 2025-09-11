@@ -406,9 +406,9 @@ function generateTasksDescription() {
             const remainingTime = getRemainingDays(task.dueDate);
 
             // Construir el detalle de la tarea
-            let details = `Para: ${formattedDate}`;
-            if (formattedDate !== 'Indefinido') {
-                details += ` | Restante: ${remainingTime}`;
+            let details = `Fecha estipulada: ${formattedDate}`;
+            if (formattedDate !== 'Tiempo Indefinido') {
+                details += ` | Tiempo restante: ${remainingTime}`;
             }
             return `- ${task.name} (${details})`;
         }).join('\n\n');
@@ -1886,3 +1886,4 @@ async function checkAndPerformAutoDelete(userId) {
         } else { await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now); }
     }
 }
+
