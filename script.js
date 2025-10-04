@@ -1639,31 +1639,32 @@ function isToday(date) { const t=new Date(); return date.toDateString() === t.to
 } antes de la automatizacion*/
 
 function getRemainingDays(dueDateStr) {
-    // --- INICIO DE LA MODIFICACIÓN CLAVE ---
     if (!dueDateStr || dueDateStr === 'indefinido' || dueDateStr.toUpperCase().startsWith('N/A')) {
-        return 'indefinido';
+        return 'Indefinido';
     }
 
-    let dateToParse = dueDateStr;
+    let d; // Declaramos la variable de fecha
+
+    // --- INICIO DE LA LÓGICA CORREGIDA ---
     if (dueDateStr.toUpperCase().includes('TN/A')) {
-        dateToParse = dueDateStr.split('T')[0];
+        const dateOnly = dueDateStr.split('T')[0];
+        d = new Date(dateOnly.replace(/-/g, '/'));
+    } else {
+        d = new Date(dueDateStr);
     }
-    // --- FIN DE LA MODIFICACIÓN CLAVE ---
+    // --- FIN DE LA LÓGICA CORREGIDA ---
+
+    if (isNaN(d.getTime())) return 'NaN';
 
     const now = new Date();
-    // Usamos la fecha limpia y con el reemplazo para la zona horaria
-    const due = new Date(dateToParse.replace(/-/g, '/'));
-    
-    if (isNaN(due.getTime())) return 'NaN'; // Control de error
-
-    const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const dueDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     if (dueDayStart < todayStart) return 'Vencida';
 
-    if (isToday(due)) {
-        if (due < now) return 'Vencida';
-        const diffMs = due - now;
+    if (isToday(d)) {
+        if (d < now) return 'Vencida';
+        const diffMs = d - now;
         const h = Math.floor(diffMs / 3600000);
         if (h > 0) return `Faltan ${h} ${h === 1 ? 'hora' : 'horas'}`;
         const m = Math.ceil(diffMs / 60000);
@@ -1676,25 +1677,28 @@ function formatDate(dateStr) {
         return 'Tiempo Indefinido';
     }
 
-    let dateToParse = dateStr;
-    let timeIsSpecified = true;
+    let d; // Declaramos la variable de fecha
+    let timeIsPartOfString = !dateStr.toUpperCase().includes('TN/A');
 
+    // --- INICIO DE LA LÓGICA CORREGIDA ---
     if (dateStr.toUpperCase().includes('TN/A')) {
-        dateToParse = dateStr.split('T')[0];
-        timeIsSpecified = false;
+        // Caso 1: Formato de Make sin hora (ej: 2025-10-05TN/A)
+        const dateOnly = dateStr.split('T')[0];
+        // Usamos el truco de la zona horaria solo para este caso
+        d = new Date(dateOnly.replace(/-/g, '/'));
+    } else {
+        // Caso 2: Formato estándar con hora (ej: 2025-10-05T07:00 o con la Z)
+        // Lo procesamos directamente, sin trucos.
+        d = new Date(dateStr);
     }
-
-    // --- INICIO DE LA MODIFICACIÓN CLAVE ---
-    // Reemplazamos los guiones por barras para forzar la interpretación en la zona horaria local
-    // y evitar que la fecha se vaya al día anterior.
-    const d = new Date(dateToParse.replace(/-/g, '/'));
-    // --- FIN DE LA MODIFICACIÓN CLAVE ---
+    // --- FIN DE LA LÓGICA CORREGIDA ---
 
     if (isNaN(d.getTime())) return 'Fecha inválida';
 
     const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
-    if (timeIsSpecified && (new Date(dateStr).getHours() !== 23 || new Date(dateStr).getMinutes() !== 59)) {
+    // Verificamos si la fecha original tenía una hora específica
+    if (timeIsPartOfString && (d.getHours() !== 23 || d.getMinutes() !== 59)) {
         return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
     }
     return d.toLocaleDateString('es-ES', opts);
