@@ -1615,7 +1615,7 @@ async function deleteTask(taskId) {
 }
 
 function isToday(date) { const t=new Date(); return date.toDateString() === t.toDateString(); }
-function getRemainingDays(dueDateStr) {
+/*function getRemainingDays(dueDateStr) {
     if (dueDateStr === 'indefinido' || !dueDateStr) return 'Indefinido';
     const now = new Date(); const due = new Date(dueDateStr);
     const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
@@ -1630,11 +1630,61 @@ function getRemainingDays(dueDateStr) {
     }
     return `Faltan ${Math.ceil((dueDayStart - todayStart) / (1000 * 60 * 60 * 24))} días`;
 }
-function formatDate(dateStr) {
+/*function formatDate(dateStr) {
     if (dateStr === 'indefinido' || !dateStr) return 'Indefinido';
     const d = new Date(dateStr); if (isNaN(d.getTime())) return 'Fecha inválida';
     const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     if (d.getHours() !== 23 || d.getMinutes() !== 59 || d.getSeconds() !== 59) return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-ES', opts);
+} antes de la automatizacion*/
+
+function getRemainingDays(dueDateStr) {
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Si el valor no existe, es 'indefinido' o contiene 'N/A' en cualquier parte, lo tratamos como indefinido.
+    if (!dueDateStr || dueDateStr === 'indefinido' || dueDateStr.toUpperCase().includes('N/A')) {
+        return 'Indefinido';
+    }
+    // --- FIN DE LA MODIFICACIÓN ---
+
+    const now = new Date(); const due = new Date(dueDateStr);
+    const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (dueDayStart < todayStart) return 'Vencida';
+    if (isToday(due)) {
+        if (due < now) return 'Vencida';
+        const diffMs = due - now; const h = Math.floor(diffMs / 3600000);
+        if (h > 0) return `Faltan ${h} ${h === 1 ? 'hora' : 'horas'}`;
+        const m = Math.ceil(diffMs / 60000);
+        return `Faltan ${m} ${m === 1 ? 'minuto' : 'minutos'}`;
+    }
+    return `Faltan ${Math.ceil((dueDayStart - todayStart) / (1000 * 60 * 60 * 24))} días`;
+}
+function formatDate(dateStr) {
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Si el valor no existe, es 'indefinido' o empieza con 'N/A', lo tratamos como indefinido.
+    if (!dateStr || dateStr === 'indefinido' || dateStr.toUpperCase().startsWith('N/A')) {
+        return 'Tiempo Indefinido';
+    }
+
+    let dateToParse = dateStr;
+    let timeIsSpecified = true;
+
+    // Si incluye 'TN/A', significa que tiene fecha pero no hora.
+    if (dateStr.toUpperCase().includes('TN/A')) {
+        dateToParse = dateStr.split('T')[0]; // Tomamos solo la parte de la fecha (ej: "2025-10-31")
+        timeIsSpecified = false;
+    }
+    // --- FIN DE LA MODIFICACIÓN ---
+
+    const d = new Date(dateToParse); // Usamos la fecha ya limpia para la conversión
+    if (isNaN(d.getTime())) return 'Fecha inválida';
+
+    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+    // Comprobamos si debemos mostrar la hora.
+    if (timeIsSpecified && (d.getHours() !== 23 || d.getMinutes() !== 59 || d.getSeconds() !== 59)) {
+        return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
+    }
     return d.toLocaleDateString('es-ES', opts);
 }
 function createTaskElement(task) {
@@ -1886,4 +1936,3 @@ async function checkAndPerformAutoDelete(userId) {
         } else { await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now); }
     }
 }
-
