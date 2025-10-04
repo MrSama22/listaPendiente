@@ -1639,20 +1639,32 @@ function isToday(date) { const t=new Date(); return date.toDateString() === t.to
 } antes de la automatizacion*/
 
 function getRemainingDays(dueDateStr) {
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Si el valor no existe, es 'indefinido' o contiene 'N/A' en cualquier parte, lo tratamos como indefinido.
-    if (!dueDateStr || dueDateStr === 'indefinido' || dueDateStr.toUpperCase().includes('N/A')) {
-        return 'Indefinido';
+    // --- INICIO DE LA MODIFICACIÓN CLAVE ---
+    if (!dueDateStr || dueDateStr === 'indefinido' || dueDateStr.toUpperCase().startsWith('N/A')) {
+        return 'indefinido';
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 
-    const now = new Date(); const due = new Date(dueDateStr);
+    let dateToParse = dueDateStr;
+    if (dueDateStr.toUpperCase().includes('TN/A')) {
+        dateToParse = dueDateStr.split('T')[0];
+    }
+    // --- FIN DE LA MODIFICACIÓN CLAVE ---
+
+    const now = new Date();
+    // Usamos la fecha limpia y con el reemplazo para la zona horaria
+    const due = new Date(dateToParse.replace(/-/g, '/'));
+    
+    if (isNaN(due.getTime())) return 'NaN'; // Control de error
+
     const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     if (dueDayStart < todayStart) return 'Vencida';
+
     if (isToday(due)) {
         if (due < now) return 'Vencida';
-        const diffMs = due - now; const h = Math.floor(diffMs / 3600000);
+        const diffMs = due - now;
+        const h = Math.floor(diffMs / 3600000);
         if (h > 0) return `Faltan ${h} ${h === 1 ? 'hora' : 'horas'}`;
         const m = Math.ceil(diffMs / 60000);
         return `Faltan ${m} ${m === 1 ? 'minuto' : 'minutos'}`;
@@ -1660,8 +1672,6 @@ function getRemainingDays(dueDateStr) {
     return `Faltan ${Math.ceil((dueDayStart - todayStart) / (1000 * 60 * 60 * 24))} días`;
 }
 function formatDate(dateStr) {
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Si el valor no existe, es 'indefinido' o empieza con 'N/A', lo tratamos como indefinido.
     if (!dateStr || dateStr === 'indefinido' || dateStr.toUpperCase().startsWith('N/A')) {
         return 'Tiempo Indefinido';
     }
@@ -1669,20 +1679,22 @@ function formatDate(dateStr) {
     let dateToParse = dateStr;
     let timeIsSpecified = true;
 
-    // Si incluye 'TN/A', significa que tiene fecha pero no hora.
     if (dateStr.toUpperCase().includes('TN/A')) {
-        dateToParse = dateStr.split('T')[0]; // Tomamos solo la parte de la fecha (ej: "2025-10-31")
+        dateToParse = dateStr.split('T')[0];
         timeIsSpecified = false;
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 
-    const d = new Date(dateToParse); // Usamos la fecha ya limpia para la conversión
+    // --- INICIO DE LA MODIFICACIÓN CLAVE ---
+    // Reemplazamos los guiones por barras para forzar la interpretación en la zona horaria local
+    // y evitar que la fecha se vaya al día anterior.
+    const d = new Date(dateToParse.replace(/-/g, '/'));
+    // --- FIN DE LA MODIFICACIÓN CLAVE ---
+
     if (isNaN(d.getTime())) return 'Fecha inválida';
 
     const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
-    // Comprobamos si debemos mostrar la hora.
-    if (timeIsSpecified && (d.getHours() !== 23 || d.getMinutes() !== 59 || d.getSeconds() !== 59)) {
+    if (timeIsSpecified && (new Date(dateStr).getHours() !== 23 || new Date(dateStr).getMinutes() !== 59)) {
         return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
     }
     return d.toLocaleDateString('es-ES', opts);
