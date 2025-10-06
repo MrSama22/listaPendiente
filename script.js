@@ -1414,7 +1414,7 @@ function initTaskListeners(uid) {
 
         // --- INICIO DE LA MODIFICACIÓN ---
         // URL del Webhook de tu imagen
-        const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestore_change";
+        const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestoreChange";
 
         // Llama al webhook de MacroDroid en segundo plano
         fetch(macrodroidWebhookUrl).catch(err => console.log("Error llamando a MacroDroid:", err));
@@ -1992,3 +1992,4 @@ async function checkAndPerformAutoDelete(userId) {
         } else { await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now); }
     }
 }
+
