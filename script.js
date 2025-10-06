@@ -1374,12 +1374,52 @@ let currentEditingTaskId = null;
 let selectedTaskId = null;
 let justToggledId = null;
 
+/*function initTaskListeners(uid) {
+    if (unsubscribe) unsubscribe();
+    tasksCol = db.collection('users').doc(uid).collection('tasks');
+    let firstLoad = true;
+    unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => { // <<< Added async
+        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderTasks();
+        renderCalendar();
+        if (firstLoad) {
+            loadUserSettings(uid);
+            checkAndPerformAutoDelete(uid);
+            initCalendar();
+            if (isGoogleCalendarSignedIn && currentUserId) {
+                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+                await checkAndCleanUpOverdueTaskReminders(); // <<< MOVED HERE for first load
+                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
+                    renderIndividualTaskRemindersList();
+                    renderGlobalRemindersList();
+                }
+            }
+            firstLoad = false;
+        } else {
+             if (isGoogleCalendarSignedIn && currentUserId) {
+                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
+                    renderIndividualTaskRemindersList();
+                }
+            }
+        }
+    }, err => console.error("Error escuchando tareas:", err));
+}*/
 function initTaskListeners(uid) {
     if (unsubscribe) unsubscribe();
     tasksCol = db.collection('users').doc(uid).collection('tasks');
     let firstLoad = true;
     unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => { // <<< Added async
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // URL del Webhook de tu imagen
+        const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestore_change";
+
+        // Llama al webhook de MacroDroid en segundo plano
+        fetch(macrodroidWebhookUrl).catch(err => console.log("Error llamando a MacroDroid:", err));
+        // --- FIN DE LA MODIFICACIÓN ---
+
         renderTasks();
         renderCalendar();
         if (firstLoad) {
