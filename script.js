@@ -1,3 +1,24 @@
+// ===============================================================
+// INICIO: Función para enviar la señal a MacroDroid
+// ===============================================================
+let macrodroidTimer = null; // Variable para nuestro temporizador
+
+function sendSignalToMacroDroid() {
+    // Limpiamos cualquier temporizador anterior para agrupar llamadas rápidas
+    clearTimeout(macrodroidTimer);
+    
+    // Creamos un nuevo temporizador que se ejecutará en 1 segundo (1000 ms)
+    macrodroidTimer = setTimeout(() => {
+        const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestoreChange";
+        fetch(macrodroidWebhookUrl).catch(err => console.log("Error llamando a MacroDroid:", err));
+        console.log("Señal de cambio de tarea enviada a MacroDroid.");
+    }, 1000);
+}
+// ===============================================================
+// FIN: Función para enviar la señal a MacroDroid
+// ===============================================================
+
+
 // ---- 0. Firebase init ----
 const firebaseConfig = {
     apiKey: "AIzaSyAQ7Q1Cue5exrewckwTkIHq-UgKzftXPHE", // KEEP AS PLACEHOLDER
@@ -1008,6 +1029,7 @@ async function confirmAndSaveIndividualTaskReminder(taskId) {
         alert(`Recordatorio de tarea ${operationVerb} en Google Calendar.`);
         if (tasksCol && newEventId) {
             await updateTaskDB(task.id, { googleCalendarEventId: newEventId });
+            sendSignalToMacroDroid();
             const localTask = tasks.find(t => t.id === taskId);
             if (localTask) localTask.googleCalendarEventId = newEventId;
         }
@@ -1032,6 +1054,7 @@ async function removeTaskReminder(taskId, calledFromSettings = false) {
             try {
                 await deleteGoogleCalendarEvent(task.googleCalendarEventId);
                 await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
+                sendSignalToMacroDroid();
                 const localTask = tasks.find(t => t.id === taskId);
                 if (localTask) delete localTask.googleCalendarEventId;
                 alert('Recordatorio de Google Calendar eliminado para esta tarea.');
@@ -1045,6 +1068,7 @@ async function removeTaskReminder(taskId, calledFromSettings = false) {
                      alert("El recordatorio no se encontró en Google Calendar (quizás ya fue borrado). Se quitará la referencia de la tarea.");
                      try {
                         await updateTaskDB(taskId, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
+                        sendSignalToMacroDroid();
                         const localTask = tasks.find(t => t.id === taskId); if (localTask) delete localTask.googleCalendarEventId;
                         renderTasks();
                         if (calledFromSettings || (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block')) {
@@ -1374,37 +1398,6 @@ let currentEditingTaskId = null;
 let selectedTaskId = null;
 let justToggledId = null;
 
-/*function initTaskListeners(uid) {
-    if (unsubscribe) unsubscribe();
-    tasksCol = db.collection('users').doc(uid).collection('tasks');
-    let firstLoad = true;
-    unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => { // <<< Added async
-        tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderTasks();
-        renderCalendar();
-        if (firstLoad) {
-            loadUserSettings(uid);
-            checkAndPerformAutoDelete(uid);
-            initCalendar();
-            if (isGoogleCalendarSignedIn && currentUserId) {
-                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                await checkAndCleanUpOverdueTaskReminders(); // <<< MOVED HERE for first load
-                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
-                    renderIndividualTaskRemindersList();
-                    renderGlobalRemindersList();
-                }
-            }
-            firstLoad = false;
-        } else {
-             if (isGoogleCalendarSignedIn && currentUserId) {
-                updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
-                    renderIndividualTaskRemindersList();
-                }
-            }
-        }
-    }, err => console.error("Error escuchando tareas:", err));
-}*/
 function initTaskListeners(uid) {
     if (unsubscribe) unsubscribe();
     tasksCol = db.collection('users').doc(uid).collection('tasks');
@@ -1412,16 +1405,9 @@ function initTaskListeners(uid) {
     unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => { // <<< Added async
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // URL del Webhook de tu imagen
-        const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestoreChange";
-
-        // Llama al webhook de MacroDroid en segundo plano
-        fetch(macrodroidWebhookUrl).catch(err => console.log("Error llamando a MacroDroid:", err));
-        // --- FIN DE LA MODIFICACIÓN ---
-
         renderTasks();
         renderCalendar();
+        
         if (firstLoad) {
             loadUserSettings(uid);
             checkAndPerformAutoDelete(uid);
@@ -1482,7 +1468,10 @@ function processCommand() {
             dueDate: dueDate ? dueDate.toISOString() : 'indefinido',
             completed: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => { if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId); })
+        }).then(() => {
+            sendSignalToMacroDroid();
+            if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+        })
           .catch(err => console.error("Error adding task from command (DB):", err));
         commandInput.value = '';
         alert(`Tarea "${taskName}" creada para ${formatDate(dueDate ? dueDate.toISOString() : 'indefinido')}`);
@@ -1572,6 +1561,7 @@ function saveEditedTask() {
     }
     updateTaskDB(currentEditingTaskId, {name:name,dueDate:dueDate})
         .then(async () => { // <<< Added async
+            sendSignalToMacroDroid();
             alert('Tarea actualizada.');
             if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
@@ -1599,7 +1589,10 @@ function addTask() {
         dueDate = newDate.toISOString();
     }
     addTaskDB({name:name, dueDate:dueDate, completed:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()})
-        .then(() => { if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId); })
+        .then(() => {
+            sendSignalToMacroDroid();
+            if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+        })
         .catch(err => alert("Error añadiendo: "+err.message));
     clearForm();
 }
@@ -1612,6 +1605,7 @@ function toggleTaskStatus(taskId) {
         const newCompletedStatus = !task.completed;
         updateTaskDB(taskId, { completed: newCompletedStatus })
             .then(async () => { // <<< Added async
+                sendSignalToMacroDroid();
                 if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
                     if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
                         renderIndividualTaskRemindersList();
@@ -1645,6 +1639,7 @@ async function deleteTask(taskId) {
         }
         deleteTaskDB(taskId)
             .then(() => {
+                sendSignalToMacroDroid();
                  if (task && task.googleCalendarEventId && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && isGoogleCalendarSignedIn && currentUserId) {
                     renderIndividualTaskRemindersList();
                 }
@@ -1938,6 +1933,7 @@ async function confirmThenDeleteCompletedTasks() {
         }
         try {
             await deleteMultipleTasksByIds(ids);
+            sendSignalToMacroDroid();
             alert(`${ids.length} tarea(s) eliminada(s).`);
             if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block' && isGoogleCalendarSignedIn && currentUserId) renderIndividualTaskRemindersList();
             if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
@@ -1992,4 +1988,3 @@ async function checkAndPerformAutoDelete(userId) {
         } else { await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now); }
     }
 }
-
