@@ -1,13 +1,32 @@
+¡Absolutamente\! Tienes toda la razón. Es mucho más inteligente y eficiente crear una solución central en lugar de arreglar el mismo error en cada función individualmente.
+
+Lo que haremos es exactamente eso. Crearemos una única **"función traductora" universal** para las fechas. Luego, actualizaremos todo el código para que, cada vez que necesite entender una fecha, le pregunte a esta función experta. Este método es más limpio, profesional y asegura que todo tu código se comporte de manera consistente.
+
+Aquí tienes el código completo y actualizado de tu archivo `script app para arreglar el cornogama y las fechas.js`.
+
+### Instrucciones
+
+1.  **Selecciona y copia** todo el código que se encuentra en el siguiente bloque.
+2.  **Abre tu archivo** `script app para arreglar el cornogama y las fechas.js` en tu editor de código.
+3.  **Borra todo el contenido** de tu archivo actual.
+4.  **Pega el nuevo código** que copiaste.
+5.  **Guarda los cambios** y sube el archivo a tu servidor.
+6.  **Limpia la caché de tu navegador** (Ctrl+F5 en Windows o Cmd+Shift+R en Mac) para asegurarte de que se cargue la nueva versión.
+
+-----
+
+### Código Completo y Actualizado
+
+Este código incluye la nueva función `parseTaskDate` y actualiza todas las demás funciones (`formatDate`, `getRemainingDays`, `showEditModal`, `addTasksToCalendarDay`, etc.) para que la utilicen.
+
+```javascript
 // ===============================================================
 // INICIO: Función para enviar la señal a MacroDroid
 // ===============================================================
 let macrodroidTimer = null; // Variable para nuestro temporizador
 
 function sendSignalToMacroDroid() {
-    // Limpiamos cualquier temporizador anterior para agrupar llamadas rápidas
     clearTimeout(macrodroidTimer);
-    
-    // Creamos un nuevo temporizador que se ejecutará en 1 segundo (1000 ms)
     macrodroidTimer = setTimeout(() => {
         const macrodroidWebhookUrl = "https://trigger.macrodroid.com/0731409a-198d-4cda-86fd-ed6fbc69b3fe/firestoreChange";
         fetch(macrodroidWebhookUrl).catch(err => console.log("Error llamando a MacroDroid:", err));
@@ -88,6 +107,35 @@ let google;
 let isGoogleCalendarSignedIn = false;
 let currentUserId = null;
 let repeatingRemindersIntervalId = null;
+
+// ===============================================================
+// INICIO: NUEVA FUNCIÓN TRADUCTORA UNIVERSAL DE FECHAS
+// ===============================================================
+/**
+ * Función Universal para "traducir" cualquier formato de fecha de la app.
+ * Acepta formatos de la app, del bot (con y sin hora) e indefinidos.
+ * Devuelve un objeto Date válido o null si la fecha no es válida o no existe.
+ */
+function parseTaskDate(dateStr) {
+    // Si la fecha es indefinida, nula, o empieza con N/A, devuelve null.
+    if (!dateStr || dateStr === 'indefinido' || dateStr.toUpperCase().startsWith('N/A')) {
+        return null;
+    }
+    // Si es el formato del bot sin hora (ej: 2025-10-30TN/A)
+    if (dateStr.toUpperCase().includes('TN/A')) {
+        const dateOnly = dateStr.split('T')[0];
+        // El .replace() es clave para evitar errores de un día por la zona horaria
+        return new Date(dateOnly.replace(/-/g, '/'));
+    }
+    // Si es un formato estándar (ej: 2025-10-30T15:00:00.000Z)
+    const d = new Date(dateStr);
+    // Devuelve null si la fecha es inválida para prevenir errores
+    return isNaN(d.getTime()) ? null : d;
+}
+// ===============================================================
+// FIN: NUEVA FUNCIÓN TRADUCTORA UNIVERSAL DE FECHAS
+// ===============================================================
+
 
 // ---- Dark Mode Functions ----
 function setDarkMode(isDark) {
@@ -183,7 +231,7 @@ async function initializeGoogleCalendar() {
         if (isGoogleCalendarSignedIn && currentUserId) {
             renderGlobalRemindersList();
             renderIndividualTaskRemindersList();
-            await checkAndCleanUpOverdueTaskReminders(); // <<< ADDED: Check for overdue reminders
+            await checkAndCleanUpOverdueTaskReminders();
             startRepeatingRemindersUpdateInterval();
         }
 
@@ -201,7 +249,7 @@ function signInToGoogle() {
     const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CONFIG.CLIENT_ID,
         scope: GOOGLE_CONFIG.SCOPES,
-        callback: async (tokenResponse) => { // <<< Added async
+        callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 gapi.client.setToken(tokenResponse);
                 isGoogleCalendarSignedIn = true;
@@ -212,7 +260,7 @@ function signInToGoogle() {
                     renderGlobalRemindersList();
                     renderIndividualTaskRemindersList();
                     updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                    await checkAndCleanUpOverdueTaskReminders(); // <<< ADDED: Check for overdue reminders
+                    await checkAndCleanUpOverdueTaskReminders();
                     startRepeatingRemindersUpdateInterval();
                 }
             } else {
@@ -277,14 +325,10 @@ function signOutFromGoogleCalendar() {
     }
 }
 
-// ---- START: NEW FUNCTION FOR PROACTIVE REFRESH ----
-/**
- * Intenta refrescar silenciosamente el token de Google si ha pasado suficiente tiempo
- * desde el último intento, para mantener la sesión activa.
- */
+
 function proactiveGoogleTokenRefresh() {
     if (!isGoogleCalendarSignedIn || !google || !google.accounts || !google.accounts.oauth2) {
-        return; // No hacer nada si no se ha conectado previamente o la librería no está lista.
+        return;
     }
 
     const LAST_REFRESH_KEY = 'googleLastTokenRefresh';
@@ -293,16 +337,15 @@ function proactiveGoogleTokenRefresh() {
 
     if (Date.now() - lastRefreshTimestamp < TEN_MINUTES_MS) {
         console.log("Refresco proactivo de token omitido: no han pasado 10 minutos.");
-        return; // No ha pasado suficiente tiempo, no hacer nada.
+        return;
     }
 
     console.log("Iniciando refresco proactivo de token de Google...");
-    localStorage.setItem(LAST_REFRESH_KEY, Date.now().toString()); // Actualizar timestamp ahora para evitar reintentos rápidos
+    localStorage.setItem(LAST_REFRESH_KEY, Date.now().toString());
 
     const tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CONFIG.CLIENT_ID,
         scope: GOOGLE_CONFIG.SCOPES,
-        // Omitir el 'prompt' para un intento silencioso
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 gapi.client.setToken(tokenResponse);
@@ -310,7 +353,6 @@ function proactiveGoogleTokenRefresh() {
                 localStorage.setItem('googleAccessToken', tokenResponse.access_token);
                 console.log('Token de Google refrescado proactivamente con éxito.');
                 updateCalendarRelatedUI();
-                // Opcional: reiniciar el intervalo de actualización si se había detenido
                 if (!repeatingRemindersIntervalId) {
                     startRepeatingRemindersUpdateInterval();
                 }
@@ -320,16 +362,11 @@ function proactiveGoogleTokenRefresh() {
         },
         error_callback: (error) => {
             console.error("Error durante el refresco proactivo de token de Google:", error);
-            // Si el error indica que se requiere interacción del usuario, es normal.
-            // No es necesario hacer nada más aquí, el sistema ya detectará el token inválido
-            // en la próxima llamada a la API a través de `makeAuthenticatedApiCall`.
         }
     });
 
-    // Solicita el token. Como no hay 'prompt', fallará silenciosamente si se necesita consentimiento.
     tokenClient.requestAccessToken({ prompt: '' });
 }
-// ---- END: NEW FUNCTION ----
 
 
 function updateCalendarRelatedUI() {
@@ -413,10 +450,6 @@ async function removeUserGlobalReminderEventId(userId, eventId) {
     }, { merge: true });
 }
 
-/**
- * Genera la descripción para los recordatorios de Google Calendar,
- * incluyendo el tiempo restante para cada tarea.
- */
 function generateTasksDescription() {
     const pendingTasks = tasks.filter(t => !t.completed);
     let tasksListString;
@@ -426,7 +459,6 @@ function generateTasksDescription() {
             const formattedDate = formatDate(task.dueDate);
             const remainingTime = getRemainingDays(task.dueDate);
 
-            // Construir el detalle de la tarea
             let details = `Fecha estipulada: ${formattedDate}`;
             if (formattedDate !== 'Tiempo Indefinido') {
                 details += ` | Tiempo restante: ${remainingTime}`;
@@ -613,20 +645,18 @@ async function updateRepeatingGlobalRemindersDescriptions(userId) {
     }
 }
 
-// ---- START: MODIFIED FUNCTION ----
+
 function startRepeatingRemindersUpdateInterval() {
     if (repeatingRemindersIntervalId) clearInterval(repeatingRemindersIntervalId);
     if (currentUserId && isGoogleCalendarSignedIn) {
-        // Actualiza inmediatamente al iniciar
         updateRepeatingGlobalRemindersDescriptions(currentUserId);
-        // Y luego establece el intervalo para cada 30 minutos
         repeatingRemindersIntervalId = setInterval(() => {
             updateRepeatingGlobalRemindersDescriptions(currentUserId);
-            console.log("Actualización periódica de recordatorios recurrentes ejecutada."); // Log para verificar
-        }, 30 * 60 * 1000); // 30 minutes
+            console.log("Actualización periódica de recordatorios recurrentes ejecutada.");
+        }, 30 * 60 * 1000);
     }
 }
-// ---- END: MODIFIED FUNCTION ----
+
 
 function stopRepeatingRemindersUpdateInterval() {
     if (repeatingRemindersIntervalId) {
@@ -871,7 +901,7 @@ async function renderIndividualTaskRemindersList() {
     document.querySelectorAll('.delete-individual-task-reminder-btn').forEach(button => button.addEventListener('click', (e) => removeTaskReminder(e.currentTarget.dataset.taskId, true)));
 }
 
-// ---- START: NEW FUNCTION TO CLEAN UP OVERDUE TASK REMINDERS ----
+
 async function checkAndCleanUpOverdueTaskReminders() {
     if (!currentUserId || !isGoogleCalendarSignedIn || !tasksCol || tasks.length === 0) {
         console.log("Cleanup of overdue task reminders skipped: No user, GCal not signed in, or no tasks.");
@@ -882,7 +912,7 @@ async function checkAndCleanUpOverdueTaskReminders() {
     let remindersCleaned = 0;
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    oneDayAgo.setHours(23, 59, 59, 999); // End of "more than 1 day ago"
+    oneDayAgo.setHours(23, 59, 59, 999);
 
     const tasksToProcess = tasks.filter(task =>
         task.googleCalendarEventId &&
@@ -892,54 +922,46 @@ async function checkAndCleanUpOverdueTaskReminders() {
     );
 
     for (const task of tasksToProcess) {
-        try {
-            const taskDueDate = new Date(task.dueDate);
-            if (isNaN(taskDueDate.getTime())) continue; // Skip invalid due dates
+        const taskDueDate = parseTaskDate(task.dueDate); // <-- Usamos el traductor
+        if (!taskDueDate) continue;
 
-            if (taskDueDate < oneDayAgo) { // Task is overdue by more than 1 day
-                console.log(`Task "${task.name}" (due: ${taskDueDate.toLocaleDateString()}) is overdue. Attempting to delete its GCal reminder ${task.googleCalendarEventId}.`);
-                try {
-                    await deleteGoogleCalendarEvent(task.googleCalendarEventId);
-                    // If successful, remove from DB
+        if (taskDueDate < oneDayAgo) {
+            console.log(`Task "${task.name}" (due: ${taskDueDate.toLocaleDateString()}) is overdue. Attempting to delete its GCal reminder ${task.googleCalendarEventId}.`);
+            try {
+                await deleteGoogleCalendarEvent(task.googleCalendarEventId);
+                await updateTaskDB(task.id, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
+                const localTask = tasks.find(t => t.id === task.id);
+                if (localTask) delete localTask.googleCalendarEventId;
+                console.log(`Successfully deleted overdue GCal reminder for task "${task.name}" and updated Firestore.`);
+                remindersCleaned++;
+            } catch (gcalError) {
+                if (gcalError.message && gcalError.message.includes("Google Authentication Error")) {
+                    console.warn("Google Auth error during overdue reminder cleanup. Stopping cleanup.");
+                    return;
+                } else if (gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410)) {
+                    console.log(`GCal reminder for task "${task.name}" not found (404/410). Removing reference from Firestore.`);
                     await updateTaskDB(task.id, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
                     const localTask = tasks.find(t => t.id === task.id);
                     if (localTask) delete localTask.googleCalendarEventId;
-                    console.log(`Successfully deleted overdue GCal reminder for task "${task.name}" and updated Firestore.`);
                     remindersCleaned++;
-                } catch (gcalError) {
-                    if (gcalError.message && gcalError.message.includes("Google Authentication Error")) {
-                        // Auth error already handled by makeAuthenticatedApiCall, stop further processing
-                        console.warn("Google Auth error during overdue reminder cleanup. Stopping cleanup.");
-                        return;
-                    } else if (gcalError.result && (gcalError.result.error.code === 404 || gcalError.result.error.code === 410)) {
-                        // Event not found, means it's already deleted or never existed properly. Safe to remove from DB.
-                        console.log(`GCal reminder for task "${task.name}" not found (404/410). Removing reference from Firestore.`);
-                        await updateTaskDB(task.id, { googleCalendarEventId: firebase.firestore.FieldValue.delete() });
-                        const localTask = tasks.find(t => t.id === task.id);
-                        if (localTask) delete localTask.googleCalendarEventId;
-                        remindersCleaned++; // Count as cleaned as the reference is removed
-                    } else {
-                        console.error(`Failed to delete overdue GCal reminder for task "${task.name}":`, gcalError);
-                        // Don't remove from DB if GCal deletion failed for other reasons
-                    }
+                } else {
+                    console.error(`Failed to delete overdue GCal reminder for task "${task.name}":`, gcalError);
                 }
             }
-        } catch (e) {
-            console.error(`Error processing task ${task.id} for overdue reminder cleanup:`, e);
         }
     }
 
     if (remindersCleaned > 0) {
         console.log(`Cleaned up ${remindersCleaned} overdue task reminder(s).`);
-        renderTasks(); // Re-render tasks to update reminder buttons
+        renderTasks();
         if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
-            renderIndividualTaskRemindersList(); // Re-render settings list if open
+            renderIndividualTaskRemindersList();
         }
     } else {
         console.log("No overdue task reminders found to clean up.");
     }
 }
-// ---- END: NEW FUNCTION ----
+
 
 function showReminderConfigModal(task) {
     if (!isGoogleCalendarSignedIn) {
@@ -969,18 +991,17 @@ function showReminderConfigModal(task) {
     document.body.insertAdjacentHTML('beforeend', modalContent);
     existingModal = document.getElementById(modalId);
     if (existingModal) existingModal.addEventListener('click', function(e) { if (e.target === this) this.remove(); });
+    
     const reminderDateTimeInput = document.getElementById('reminderDateTime');
-    if (task.dueDate && task.dueDate !== 'indefinido') {
-        try {
-            const dueDate = new Date(task.dueDate);
-            const defaultReminderTime = new Date(dueDate.getTime() - 15 * 60000);
-            let finalDefaultTime = defaultReminderTime;
-            if (defaultReminderTime < new Date() && !task.googleCalendarEventId) finalDefaultTime = new Date(Date.now() + 15 * 60000);
-            reminderDateTimeInput.value = `${finalDefaultTime.getFullYear()}-${String(finalDefaultTime.getMonth() + 1).padStart(2, '0')}-${String(finalDefaultTime.getDate()).padStart(2, '0')}T${String(finalDefaultTime.getHours()).padStart(2, '0')}:${String(finalDefaultTime.getMinutes()).padStart(2, '0')}`;
-        } catch (e) {
-            const nowPlus15 = new Date(Date.now() + 15 * 60000);
-            reminderDateTimeInput.value = `${nowPlus15.getFullYear()}-${String(nowPlus15.getMonth() + 1).padStart(2, '0')}-${String(nowPlus15.getDate()).padStart(2, '0')}T${String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
+    const dueDate = parseTaskDate(task.dueDate); // <-- Usamos el traductor
+
+    if (dueDate) {
+        const defaultReminderTime = new Date(dueDate.getTime() - 15 * 60000);
+        let finalDefaultTime = defaultReminderTime;
+        if (defaultReminderTime < new Date() && !task.googleCalendarEventId) {
+            finalDefaultTime = new Date(Date.now() + 15 * 60000);
         }
+        reminderDateTimeInput.value = `${finalDefaultTime.getFullYear()}-${String(finalDefaultTime.getMonth() + 1).padStart(2, '0')}-${String(finalDefaultTime.getDate()).padStart(2, '0')}T${String(finalDefaultTime.getHours()).padStart(2, '0')}:${String(finalDefaultTime.getMinutes()).padStart(2, '0')}`;
     } else {
         const nowPlus15 = new Date(Date.now() + 15 * 60000);
         reminderDateTimeInput.value = `${nowPlus15.getFullYear()}-${String(nowPlus15.getMonth() + 1).padStart(2, '0')}-${String(nowPlus15.getDate()).padStart(2, '0')}T${String(nowPlus15.getHours()).padStart(2, '0')}:${String(nowPlus15.getMinutes()).padStart(2, '0')}`;
@@ -1136,7 +1157,6 @@ async function editTaskReminder(taskId) {
 
 // ---- 2. Event Listeners Iniciales ----
 document.addEventListener('DOMContentLoaded', () => {
-    // START: Dark Mode Listener
     const darkModeToggleBtn = document.getElementById('darkModeToggle');
     if (darkModeToggleBtn) {
         darkModeToggleBtn.addEventListener('click', () => {
@@ -1145,8 +1165,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     applyInitialTheme();
-    // END: Dark Mode Listener
-
     const disconnectGCalBtn = document.getElementById('disconnectGoogleBtn');
     if (disconnectGCalBtn) disconnectGCalBtn.addEventListener('click', () => signOutFromGoogleCalendar());
     loginBtn.addEventListener('click', () => auth.signInWithEmailAndPassword(emailInput.value, passInput.value).catch(err => alert(err.message)));
@@ -1227,13 +1245,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (defaultSettingLink) defaultSettingLink.click();
         });
         settingsBtn1.addEventListener('click', () => {
-            fromSettingsBtn1 = true; // Se marcó que vino desde este botón
+            fromSettingsBtn1 = true;
             settingsPage.style.display = 'block';
             appBox.style.display = 'none';
         
             window.scrollTo({ top: 0, behavior: 'smooth' });
         
-            // Activar primera sección
             document.querySelectorAll('.settings-section').forEach(section => {
                 section.style.display = 'none';
             });
@@ -1255,13 +1272,12 @@ document.addEventListener('DOMContentLoaded', () => {
             settingsPage.style.display = 'none';
             appBox.style.display = 'block';
         
-            // Solo hacer scroll si venía desde settingsBtn1
             if (fromSettingsBtn1) {
                 const taskListSection = document.querySelector('.vacio');
                 if (taskListSection) {
                     taskListSection.scrollIntoView({ behavior: 'smooth' });
                 }
-                fromSettingsBtn1 = false; // resetear bandera
+                fromSettingsBtn1 = false;
             }
         });
     }
@@ -1332,7 +1348,6 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// ---- 3. Manejo de sesión (MODIFICADO) ----
 auth.onAuthStateChanged(async user => {
     if (user) {
         console.log("Firebase Auth: User is signed in.", user.uid);
@@ -1342,26 +1357,17 @@ auth.onAuthStateChanged(async user => {
         if (settingsPage) settingsPage.style.display = 'none';
         initTaskListeners(user.uid);
 
-        // La UI se actualiza inmediatamente
         updateCalendarRelatedUI();
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Verifica si el usuario NO está conectado a Google Calendar y si no se le ha preguntado en esta sesión.
         if (!isGoogleCalendarSignedIn && !sessionStorage.getItem('googleSignInPrompted')) {
-            // Muestra un mensaje de confirmación amigable.
             if (confirm("Para sincronizar tareas y crear recordatorios, ¿deseas conectar tu cuenta de Google Calendar ahora?")) {
                 signInToGoogle();
             }
-            // Marca que ya se le ha preguntado en esta sesión para no volver a molestar en cada recarga.
             sessionStorage.setItem('googleSignInPrompted', 'true');
         }
-        // --- FIN DE LA MODIFICACIÓN ---
 
         if (isGoogleCalendarSignedIn) {
-            // ----> NUEVO: Llama al refresco inteligente al cargar la sesión <----
             proactiveGoogleTokenRefresh();
-
-            // El resto de las funciones que dependen de GCal
             renderGlobalRemindersList();
             renderIndividualTaskRemindersList();
             updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
@@ -1377,11 +1383,8 @@ auth.onAuthStateChanged(async user => {
         tasks = [];
         stopRepeatingRemindersUpdateInterval();
         
-        // --- AÑADIDO: Limpiar la bandera de sesión al cerrar sesión ---
         sessionStorage.removeItem('googleSignInPrompted');
 
-        // No es necesario cerrar la sesión de GCal si Firebase se desconecta.
-        // El usuario puede gestionar la conexión de GCal de forma independiente.
         updateCalendarRelatedUI();
         renderTasks();
         renderCalendar();
@@ -1402,7 +1405,7 @@ function initTaskListeners(uid) {
     if (unsubscribe) unsubscribe();
     tasksCol = db.collection('users').doc(uid).collection('tasks');
     let firstLoad = true;
-    unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => { // <<< Added async
+    unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => {
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         renderTasks();
@@ -1414,7 +1417,7 @@ function initTaskListeners(uid) {
             initCalendar();
             if (isGoogleCalendarSignedIn && currentUserId) {
                 updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                await checkAndCleanUpOverdueTaskReminders(); // <<< MOVED HERE for first load
+                await checkAndCleanUpOverdueTaskReminders();
                  if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
                     renderIndividualTaskRemindersList();
                     renderGlobalRemindersList();
@@ -1529,17 +1532,26 @@ function showEditModal(taskId) {
     const timeInput = modal.querySelector('#editTime');
     const includeTimeCb = modal.querySelector('#includeTime');
     const timeContainer = modal.querySelector('#timeInputContainer');
-    if (task.dueDate !== 'indefinido' && task.dueDate) {
-        const d = new Date(task.dueDate);
-        dateInput.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const hasTime = d.getHours()!==23 || d.getMinutes()!==59 || d.getSeconds() !== 59 ;
-        includeTimeCb.checked = hasTime;
-        if(hasTime){ timeInput.value = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; timeContainer.style.display='block';}
-        else { timeInput.value = ''; timeContainer.style.display='none';}
+
+    const parsedDate = parseTaskDate(task.dueDate); // <-- Usamos el traductor
+
+    if (parsedDate) {
+        dateInput.value = `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`;
+        
+        const hasSpecificTime = !task.dueDate.toUpperCase().includes('TN/A') && (parsedDate.getHours() !== 23 || parsedDate.getMinutes() !== 59);
+        
+        includeTimeCb.checked = hasSpecificTime;
+        timeContainer.style.display = hasSpecificTime ? 'block' : 'none';
+        if (hasSpecificTime) {
+            timeInput.value = `${String(parsedDate.getHours()).padStart(2, '0')}:${String(parsedDate.getMinutes()).padStart(2, '0')}`;
+        } else {
+            timeInput.value = '';
+        }
     } else {
-        const n = new Date();
-        dateInput.value = `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
-        timeInput.value = ''; includeTimeCb.checked = false; timeContainer.style.display='none';
+        dateInput.value = '';
+        timeInput.value = '';
+        includeTimeCb.checked = false;
+        timeContainer.style.display = 'none';
     }
     modal.style.display = 'block';
 }
@@ -1560,15 +1572,15 @@ function saveEditedTask() {
         dueDate = newDate.toISOString();
     }
     updateTaskDB(currentEditingTaskId, {name:name,dueDate:dueDate})
-        .then(async () => { // <<< Added async
+        .then(async () => {
             sendSignalToMacroDroid();
             alert('Tarea actualizada.');
-            if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
+            if (isGoogleCalendarSignedIn && currentUserId) {
                 if (settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
                     renderIndividualTaskRemindersList();
                 }
                 updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                await checkAndCleanUpOverdueTaskReminders(); // <<< ADDED: Check after task edit
+                await checkAndCleanUpOverdueTaskReminders();
             }
         })
         .catch(err => alert("Error actualizando: "+err.message));
@@ -1597,22 +1609,22 @@ function addTask() {
     clearForm();
 }
 
-// REEMPLAZA LA FUNCIÓN ANTIGUA CON ESTA
+
 function toggleTaskStatus(taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
-        justToggledId = taskId; // <-- AÑADIDO: Guardamos el ID de la tarea recién cambiada
+        justToggledId = taskId;
         const newCompletedStatus = !task.completed;
         updateTaskDB(taskId, { completed: newCompletedStatus })
-            .then(async () => { // <<< Added async
+            .then(async () => {
                 sendSignalToMacroDroid();
-                if (isGoogleCalendarSignedIn && currentUserId) { // <<< Combined condition
+                if (isGoogleCalendarSignedIn && currentUserId) {
                     if (task.googleCalendarEventId && newCompletedStatus && settingsPage.style.display === 'block' && document.getElementById('settingsGoogleCalendarSection').style.display === 'block') {
                         renderIndividualTaskRemindersList();
                     }
                     updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
-                    if (newCompletedStatus && task.googleCalendarEventId) { // If task completed, check if its reminder is now overdue (relative to due date)
-                        await checkAndCleanUpOverdueTaskReminders(); // Check if completing it makes it eligible for cleanup
+                    if (newCompletedStatus && task.googleCalendarEventId) {
+                        await checkAndCleanUpOverdueTaskReminders();
                     }
                 }
             });
@@ -1650,56 +1662,20 @@ async function deleteTask(taskId) {
 }
 
 function isToday(date) { const t=new Date(); return date.toDateString() === t.toDateString(); }
-/*function getRemainingDays(dueDateStr) {
-    if (dueDateStr === 'indefinido' || !dueDateStr) return 'Indefinido';
-    const now = new Date(); const due = new Date(dueDateStr);
-    const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (dueDayStart < todayStart) return 'Vencida';
-    if (isToday(due)) {
-        if (due < now) return 'Vencida';
-        const diffMs = due - now; const h = Math.floor(diffMs / 3600000);
-        if (h > 0) return `Faltan ${h} ${h === 1 ? 'hora' : 'horas'}`;
-        const m = Math.ceil(diffMs / 60000);
-        return `Faltan ${m} ${m === 1 ? 'minuto' : 'minutos'}`;
-    }
-    return `Faltan ${Math.ceil((dueDayStart - todayStart) / (1000 * 60 * 60 * 24))} días`;
-}
-/*function formatDate(dateStr) {
-    if (dateStr === 'indefinido' || !dateStr) return 'Indefinido';
-    const d = new Date(dateStr); if (isNaN(d.getTime())) return 'Fecha inválida';
-    const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    if (d.getHours() !== 23 || d.getMinutes() !== 59 || d.getSeconds() !== 59) return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString('es-ES', opts);
-} antes de la automatizacion*/
 
 function getRemainingDays(dueDateStr) {
-    if (!dueDateStr || dueDateStr === 'indefinido' || dueDateStr.toUpperCase().startsWith('N/A')) {
-        return 'Indefinido';
-    }
-
-    let d; // Declaramos la variable de fecha
-
-    // --- INICIO DE LA LÓGICA CORREGIDA ---
-    if (dueDateStr.toUpperCase().includes('TN/A')) {
-        const dateOnly = dueDateStr.split('T')[0];
-        d = new Date(dateOnly.replace(/-/g, '/'));
-    } else {
-        d = new Date(dueDateStr);
-    }
-    // --- FIN DE LA LÓGICA CORREGIDA ---
-
-    if (isNaN(d.getTime())) return 'NaN';
+    const due = parseTaskDate(dueDateStr); // <-- Usamos el traductor
+    if (!due) return 'Indefinido';
 
     const now = new Date();
-    const dueDayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dueDayStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     if (dueDayStart < todayStart) return 'Vencida';
 
-    if (isToday(d)) {
-        if (d < now) return 'Vencida';
-        const diffMs = d - now;
+    if (isToday(due)) {
+        if (due < now) return 'Vencida';
+        const diffMs = due - now;
         const h = Math.floor(diffMs / 3600000);
         if (h > 0) return `Faltan ${h} ${h === 1 ? 'hora' : 'horas'}`;
         const m = Math.ceil(diffMs / 60000);
@@ -1707,37 +1683,20 @@ function getRemainingDays(dueDateStr) {
     }
     return `Faltan ${Math.ceil((dueDayStart - todayStart) / (1000 * 60 * 60 * 24))} días`;
 }
+
 function formatDate(dateStr) {
-    if (!dateStr || dateStr === 'indefinido' || dateStr.toUpperCase().startsWith('N/A')) {
-        return 'Tiempo Indefinido';
-    }
-
-    let d; // Declaramos la variable de fecha
-    let timeIsPartOfString = !dateStr.toUpperCase().includes('TN/A');
-
-    // --- INICIO DE LA LÓGICA CORREGIDA ---
-    if (dateStr.toUpperCase().includes('TN/A')) {
-        // Caso 1: Formato de Make sin hora (ej: 2025-10-05TN/A)
-        const dateOnly = dateStr.split('T')[0];
-        // Usamos el truco de la zona horaria solo para este caso
-        d = new Date(dateOnly.replace(/-/g, '/'));
-    } else {
-        // Caso 2: Formato estándar con hora (ej: 2025-10-05T07:00 o con la Z)
-        // Lo procesamos directamente, sin trucos.
-        d = new Date(dateStr);
-    }
-    // --- FIN DE LA LÓGICA CORREGIDA ---
-
-    if (isNaN(d.getTime())) return 'Fecha inválida';
+    const d = parseTaskDate(dateStr); // <-- Usamos el traductor
+    if (!d) return 'Tiempo Indefinido';
 
     const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
 
-    // Verificamos si la fecha original tenía una hora específica
-    if (timeIsPartOfString && (d.getHours() !== 23 || d.getMinutes() !== 59)) {
+    const timeIsSpecified = !dateStr.toUpperCase().includes('TN/A');
+    if (timeIsSpecified && (d.getHours() !== 23 || d.getMinutes() !== 59)) {
         return d.toLocaleDateString('es-ES', { ...opts, hour: '2-digit', minute: '2-digit' });
     }
     return d.toLocaleDateString('es-ES', opts);
 }
+
 function createTaskElement(task) {
     const el = document.createElement('div');
     el.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
@@ -1745,26 +1704,26 @@ function createTaskElement(task) {
     el.dataset.id = task.id;
 
     if (task.id === justToggledId) {
-        // Añade una clase para la animación y la quita cuando la animación termina
         el.classList.add(task.completed ? 'just-completed' : 'just-uncompleted');
         setTimeout(() => {
             const freshEl = document.querySelector(`.task-item[data-id="${task.id}"]`);
             if (freshEl) {
                 freshEl.classList.remove('just-completed', 'just-uncompleted');
             }
-            justToggledId = null; // Limpia la variable
-        }, 500); // La duración debe coincidir con la animación en CSS
+            justToggledId = null;
+        }, 500);
     }
 
-    const remDays = !task.completed && task.dueDate !== 'indefinido' && task.dueDate ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
+    const remDays = !task.completed ? ` | ⏱️ ${getRemainingDays(task.dueDate)}` : '';
     let remIcon = '🔔';
     let remTitle = "Crear recordatorio en Google Calendar";
     if (task.googleCalendarEventId) {
         remIcon = '🗓️';
         remTitle = "Editar/Eliminar recordatorio existente de Google Calendar";
     }
-    const reminderButtonDisabled = task.completed || task.dueDate === 'indefinido' || !task.dueDate || !isGoogleCalendarSignedIn;
-    const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled style="display:none;"' : ''}>${remIcon}</button>`; // Hide if disabled for clarity
+    const reminderButtonDisabled = task.completed || !parseTaskDate(task.dueDate) || !isGoogleCalendarSignedIn;
+    const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled style="display:none;"' : ''}>${remIcon}</button>`;
+    
     el.innerHTML = `<div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
@@ -1772,17 +1731,15 @@ function createTaskElement(task) {
                         <button class="delete-button" data-id="${task.id}" title="Eliminar Tarea">🗑️</button>
                         ${remBtn}
                     </div>`;
-    // CÓDIGO NUEVO (REEMPLAZAR EL ANTERIOR)
+    
     el.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return; // Ignora clics en los botones de acción
+        if (e.target.closest('button')) return;
 
         const currentId = el.dataset.id;
         const isCurrentlySelected = selectedTaskId === currentId;
 
-        // Actualiza la variable que guarda el ID de la tarea seleccionada
         selectedTaskId = isCurrentlySelected ? null : currentId;
 
-        // En lugar de llamar a renderTasks(), actualizamos las clases directamente
         document.querySelectorAll('.task-item').forEach(item => {
             if (item.dataset.id === selectedTaskId) {
                 item.classList.add('selected');
@@ -1801,9 +1758,11 @@ function createTaskElement(task) {
     ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
     return el;
 }
+
 function handleLongPress(task) {
-    if (task.dueDate==='indefinido'||!task.dueDate) return;
-    const taskDate = new Date(task.dueDate);
+    const taskDate = parseTaskDate(task.dueDate); // <-- Usamos el traductor
+    if (!taskDate) return;
+
     if(taskDate.getMonth()!==currentCalendarDate.getMonth() || taskDate.getFullYear()!==currentCalendarDate.getFullYear()){
         currentCalendarDate = new Date(taskDate.getFullYear(), taskDate.getMonth(), 1); renderCalendar();
     }
@@ -1816,17 +1775,32 @@ function handleLongPress(task) {
         }
     },100);
 }
+
 function renderTasks() {
     const complDiv=document.getElementById('completedTasks'), undDiv=document.getElementById('undefinedTasks'), datDiv=document.getElementById('datedTasks');
     if(!complDiv || !undDiv || !datDiv) return;
     complDiv.innerHTML=''; undDiv.innerHTML=''; datDiv.innerHTML='';
     const pending = tasks.filter(t=>!t.completed), completed = tasks.filter(t=>t.completed);
-    pending.filter(t=>t.dueDate==='indefinido'||!t.dueDate).sort((a,b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)).forEach(t=>undDiv.appendChild(createTaskElement(t)));
-    pending.filter(t=>t.dueDate!=='indefinido'&&t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).forEach(t=>datDiv.appendChild(createTaskElement(t)));
-    completed.sort((a,b) => (b.createdAt?.toMillis() || Date.parse(b.dueDate) || 0) - (a.createdAt?.toMillis() || Date.parse(a.dueDate) || 0)).forEach(t=>complDiv.appendChild(createTaskElement(t)));
+    
+    pending.filter(t=>!parseTaskDate(t.dueDate)).sort((a,b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)).forEach(t=>undDiv.appendChild(createTaskElement(t)));
+    
+    pending.filter(t=>!!parseTaskDate(t.dueDate)).sort((a,b) => {
+        const dateA = parseTaskDate(a.dueDate);
+        const dateB = parseTaskDate(b.dueDate);
+        if (!dateA || !dateB) return 0;
+        return dateA - dateB;
+    }).forEach(t=>datDiv.appendChild(createTaskElement(t)));
+
+    completed.sort((a,b) => {
+        const timeB = (b.createdAt?.toMillis() || parseTaskDate(b.dueDate)?.getTime() || 0);
+        const timeA = (a.createdAt?.toMillis() || parseTaskDate(a.dueDate)?.getTime() || 0);
+        return timeB - timeA;
+    }).forEach(t=>complDiv.appendChild(createTaskElement(t)));
+    
     if(document.getElementById('deleteCompletedBtn')) document.getElementById('deleteCompletedBtn').disabled = completed.length === 0;
     updateCalendarRelatedUI();
 }
+
 function clearForm() {
     if(document.getElementById('taskName')) document.getElementById('taskName').value = '';
     if(document.getElementById('taskDate')) document.getElementById('taskDate').value = '';
@@ -1869,23 +1843,41 @@ function createCalendarDay(dayN, isOtherM, isTodayF=false) {
     el.className=`calendar-day${isOtherM?' other-month':''}${isTodayF?' today':''}`;
     el.innerHTML = `<div class="calendar-day-number">${dayN}</div>`; return el;
 }
+
 function addTasksToCalendarDay(dayEl, date) {
-    tasks.filter(t=>{if(t.completed||t.dueDate==='indefinido'||!t.dueDate)return false; const td=new Date(t.dueDate); return td.toDateString()===date.toDateString();})
-    .sort((a,b)=>{
-        const timeA = new Date(a.dueDate).getTime(); const timeB = new Date(b.dueDate).getTime();
-        if (new Date(a.dueDate).getHours() === 23 && new Date(a.dueDate).getMinutes() === 59 && new Date(b.dueDate).getHours() !== 23 && new Date(b.dueDate).getMinutes() !== 59) return 1;
-        if (new Date(b.dueDate).getHours() === 23 && new Date(b.dueDate).getMinutes() === 59 && new Date(a.dueDate).getHours() !== 23 && new Date(a.dueDate).getMinutes() !== 59) return -1;
-        if (timeA !== timeB) return timeA - timeB;
+    tasks.filter(t => {
+        if (t.completed) return false;
+        const parsedDate = parseTaskDate(t.dueDate); // <-- Usamos el traductor
+        if (!parsedDate) return false;
+        
+        return parsedDate.toDateString() === date.toDateString();
+    })
+    .sort((a, b) => {
+        const dateA = parseTaskDate(a.dueDate); // <-- Usamos el traductor
+        const dateB = parseTaskDate(b.dueDate); // <-- Usamos el traductor
+
+        if (!dateA || !dateB) return 0;
+
+        if (dateA.getHours() === 23 && dateA.getMinutes() === 59 && (dateB.getHours() !== 23 || dateB.getMinutes() !== 59)) return 1;
+        if (dateB.getHours() === 23 && dateB.getMinutes() === 59 && (dateA.getHours() !== 23 || dateA.getMinutes() !== 59)) return -1;
+        if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
         return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
     })
-    .forEach(t=>{
-        const taskEl=document.createElement('div'); taskEl.className='calendar-task'; taskEl.dataset.id=t.id;
-        const td=new Date(t.dueDate); let timeS='';
-        if(td.getHours()!==23||td.getMinutes()!==59 || td.getSeconds() !== 59) timeS=`${String(td.getHours()).padStart(2,'0')}:${String(td.getMinutes()).padStart(2,'0')} - `;
-        taskEl.innerHTML=`<div class="calendar-task-time">${timeS}</div>${t.name}`;
+    .forEach(t => {
+        const taskEl = document.createElement('div');
+        taskEl.className = 'calendar-task';
+        taskEl.dataset.id = t.id;
+        
+        const td = parseTaskDate(t.dueDate); // <-- Usamos el traductor
+        let timeS = '';
+        if (td && !t.dueDate.toUpperCase().includes('TN/A') && (td.getHours() !== 23 || td.getMinutes() !== 59)) {
+            timeS = `${String(td.getHours()).padStart(2, '0')}:${String(td.getMinutes()).padStart(2, '0')} - `;
+        }
+        taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div>${t.name}`;
         dayEl.appendChild(taskEl);
     });
 }
+
 function toggleTimeInput() {
     const cb = document.getElementById('includeTime');
     const tc = document.getElementById('timeInputContainer');
@@ -1988,3 +1980,4 @@ async function checkAndPerformAutoDelete(userId) {
         } else { await saveUserSetting(userId, 'lastAutoDeleteTimestamp', now); }
     }
 }
+```
