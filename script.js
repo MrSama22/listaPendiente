@@ -2424,15 +2424,26 @@ function addTasksToCalendarDay(dayEl, date) {
             taskEl.addEventListener('touchend', handleTouchEnd);
 
 
+
             // Apply task color
             let taskColor = getTaskColor(t.id);
 
             // Check if we should use category color
             const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
-            if (syncLocal && t.categoryId && window.categoryManager) {
-                const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
-                if (cat && cat.color) {
-                    taskColor = cat.color;
+            console.log('🎨 Sync Local Colors:', syncLocal, 'Task:', t.name, 'Category ID:', t.categoryId);
+
+            if (syncLocal && t.categoryId) {
+                if (window.categoryManager && window.categoryManager.categories) {
+                    const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
+                    console.log('🔍 Found category:', cat);
+                    if (cat && cat.color) {
+                        taskColor = cat.color;
+                        console.log('✅ Using category color:', taskColor, 'for task:', t.name);
+                    } else {
+                        console.log('⚠️ Category has no color or not found');
+                    }
+                } else {
+                    console.log('⚠️ categoryManager not available');
                 }
             }
 
