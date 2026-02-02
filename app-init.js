@@ -546,40 +546,28 @@ window.applyCalendarHeaderColor = applyCalendarHeaderColor;
 
 // Local Calendar Category Color Sync
 document.addEventListener('DOMContentLoaded', () => {
-    const syncLocalCheckbox = document.getElementById('syncLocalCategoryColors');
-    const syncLocalDuplicate = document.getElementById('syncLocalCategoryColorsDuplicate');
+    const syncLocalCheckbox = document.getElementById('syncLocalCategoryColorsDuplicate');
 
     if (syncLocalCheckbox) {
         // Load saved setting
         const savedSetting = localStorage.getItem('syncLocalCategoryColors') === 'true';
         syncLocalCheckbox.checked = savedSetting;
-
-        // Sync duplicate if exists
-        if (syncLocalDuplicate) {
-            syncLocalDuplicate.checked = savedSetting;
-
-            // Sync duplicate to main
-            syncLocalDuplicate.addEventListener('change', (e) => {
-                syncLocalCheckbox.checked = e.target.checked;
-                localStorage.setItem('syncLocalCategoryColors', e.target.checked);
-                if (typeof renderCalendar === 'function') renderCalendar();
-                if (typeof Toast !== 'undefined') {
-                    Toast.success(e.target.checked ? 'Colores de categoría activados' : 'Colores aleatorios restaurados');
-                }
-            });
-        }
+        console.log('🎨 Checkbox loaded, setting:', savedSetting);
 
         // Save on change and re-render calendar
         syncLocalCheckbox.addEventListener('change', (e) => {
             localStorage.setItem('syncLocalCategoryColors', e.target.checked);
-            if (syncLocalDuplicate) syncLocalDuplicate.checked = e.target.checked;
+            console.log('💾 Setting saved:', e.target.checked);
             // Re-render calendar to apply color changes
             if (typeof renderCalendar === 'function') {
                 renderCalendar();
+                console.log('🔄 Calendar re-rendered');
             }
             if (typeof Toast !== 'undefined') {
-                Toast.success(e.target.checked ? 'Colores de categoría activados en calendario' : 'Colores aleatorios restaurados en calendario');
+                Toast.success(e.target.checked ? 'Colores de categoría activados' : 'Colores aleatorios restaurados');
             }
         });
+    } else {
+        console.warn('⚠️ syncLocalCategoryColorsDuplicate checkbox not found in DOM');
     }
 });
