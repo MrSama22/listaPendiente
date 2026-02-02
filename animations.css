@@ -1,0 +1,148 @@
+/* Premium Animations */
+
+/* Keyframes */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+}
+
+@keyframes modalPopIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+/* Base Classes */
+.animate-slide-in {
+    animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-out {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+.animate-pop-in {
+    animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Component Specific Upgrades */
+
+/* Modal */
+.modal {
+    animation: fadeIn 0.2s ease-out;
+    backdrop-filter: blur(5px);
+    /* Glassmorphism background */
+    background-color: rgba(0, 0, 0, 0.6) !important;
+    /* Proper dark overlay */
+}
+
+.modal-content {
+    animation: modalPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Task Item Hover */
+.task-item {
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        background-color 0.3s;
+}
+
+.task-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Lift effect */
+    z-index: 1;
+}
+
+/* Button Upgrades */
+button {
+    transition: all 0.2s;
+}
+
+button:active {
+    transform: scale(0.96);
+    /* Click press effect */
+}
+
+/* Specific Buttons */
+#addCategoryBtn,
+#addTaskBtn,
+.ai-button {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#addCategoryBtn:hover,
+#addTaskBtn:hover,
+.ai-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Categories List */
+.category-card {
+    animation: slideInUp 0.3s ease-out backwards;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.category-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Stagger Delays (Utility) */
+/* Can apply via JS, but good to have helper classes or just style injection */

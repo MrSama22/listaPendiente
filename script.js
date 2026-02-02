@@ -1693,7 +1693,8 @@ auth.onAuthStateChanged(async user => {
 let tasks = [];
 let tasksCol, unsubscribe;
 let currentEditingTaskId = null;
-let selectedTaskId = null;
+let selectedTaskIds = new Set(); // Multi-selection Set
+let lastSelectedTaskId = null; // For Shift+Click range selection
 let justToggledId = null;
 
 function initTaskListeners(uid) {
@@ -1747,13 +1748,119 @@ async function deleteMultipleTasksByIds(taskIds) {
 // ---- 5. Funciones de la aplicación (Tasks) ----
 function handleKeyPress(event) { if (event.key === 'Enter') processCommand(); }
 
-function processCommand() {
+// Global Key Listeners for Advanced Selection
+document.addEventListener('keydown', async (e) => {
+    // Ignore if typing in input/textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+    if (e.key === 'Escape') {
+        selectedTaskIds.clear();
+        updateSelectionVisuals();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedTaskIds.size > 0 && confirm(`¿Eliminar ${selectedTaskIds.size} tareas seleccionadas?`)) {
+            await deleteMultipleTasksByIds(Array.from(selectedTaskIds));
+            selectedTaskIds.clear();
+            if (typeof Toast !== 'undefined') Toast.success('Tareas eliminadas');
+        }
+    } else if (e.key === 'Enter') {
+        if (selectedTaskIds.size > 0) {
+            const batch = db.batch();
+            selectedTaskIds.forEach(id => {
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    batch.update(tasksCol.doc(id), { completed: !task.completed });
+                }
+            });
+            await batch.commit();
+            selectedTaskIds.clear();
+            if (typeof Toast !== 'undefined') Toast.success('Estado de tareas actualizado');
+        }
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        document.querySelectorAll('.task-item').forEach(el => selectedTaskIds.add(el.dataset.id));
+        updateSelectionVisuals();
+    }
+});
+
+async function processCommand() {
     const commandInput = document.getElementById('commandInput');
-    const command = commandInput.value.toLowerCase().trim();
+    const command = commandInput.value.trim(); // Keep original case for AI
     if (!command) { alert('Ingresa un comando válido.'); return; }
+
+    // Try AI First
+    if (typeof AIHelper !== 'undefined' && AIHelper.isAvailable()) {
+        try {
+            document.body.style.cursor = 'wait';
+            if (typeof Toast !== 'undefined') Toast.info('Procesando con IA...');
+
+            const existingCats = window.categoryManager ? window.categoryManager.categories : [];
+            const result = await AIHelper.processNaturalLanguage(command, existingCats);
+
+            let categoryId = null;
+
+            // Handle Category
+            if (result.categoryName && window.categoryManager) {
+                // Try to find existing
+                const existing = window.categoryManager.categories.find(c => c.name.toLowerCase() === result.categoryName.toLowerCase());
+
+                if (existing) {
+                    categoryId = existing.id;
+                } else if (result.isNewCategory && AIHelper.config.allowCategoryCreation) {
+                    // Create new category
+                    // Generate random pastel color
+                    const hue = Math.floor(Math.random() * 360);
+                    const color = `hsl(${hue}, 70%, 80%)`;
+                    // Default emoji if not provided (AI didn't provide emoji, we could ask for it but keeping it simple)
+                    const emoji = "📁";
+
+                    try {
+                        // Assuming addCategory returns the ID or we can find it
+                        // categoryManager.addCategory is async and void in current impl? 
+                        // Let's modify addCategory to return id if possible, or just wait and find it.
+                        // Actually, looking at categories.js logic would be good, but let's assume names must be unique-ish
+                        await window.categoryManager.addCategory(result.categoryName, emoji, color);
+
+                        // Small delay to ensure it's in the list? Or find it by name
+                        const freshCats = window.categoryManager.categories;
+                        const justCreated = freshCats.find(c => c.name === result.categoryName);
+                        if (justCreated) categoryId = justCreated.id;
+
+                        if (typeof Toast !== 'undefined') Toast.success(`Categoría creada: ${result.categoryName}`);
+                    } catch (e) {
+                        console.error("Error creando categoría sugerida", e);
+                    }
+                }
+            }
+
+            addTaskDB({
+                name: result.name,
+                dueDate: result.dueDate || 'indefinido',
+                completed: false,
+                categoryId: categoryId,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                sendSignalToMacroDroid();
+                if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
+                if (typeof Toast !== 'undefined') Toast.success(`Tarea creada: ${result.name}`);
+            });
+
+            commandInput.value = '';
+            document.body.style.cursor = 'default';
+            return; // Exit function on success
+
+        } catch (e) {
+            console.error("AI Error, falling back to regex:", e);
+            if (typeof Toast !== 'undefined') Toast.error('Error de IA, intentando método clásico...');
+            document.body.style.cursor = 'default';
+            // Continue to fallback
+        }
+    }
+
+    // Fallback: Legacy Regex Parser
+    const lowerCommand = command.toLowerCase();
     let taskName = '';
     let dueDate = null;
-    const paraSplit = command.split(' para ');
+    const paraSplit = lowerCommand.split(' para ');
     let namePart = paraSplit[0];
 
     if (namePart.startsWith('crea una tarea llamada ')) taskName = namePart.substring('crea una tarea llamada '.length).trim();
@@ -2002,9 +2109,73 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('es-ES', opts);
 }
 
+// ---- Advanced Selection Logic ----
+function handleTaskSelection(event, taskId) {
+    // If clicking a button inside the task, ignore selection
+    if (event.target.closest('button') || event.target.closest('input')) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (event.ctrlKey || event.metaKey) {
+        // Toggle selection
+        if (selectedTaskIds.has(taskId)) {
+            selectedTaskIds.delete(taskId);
+            lastSelectedTaskId = null;
+        } else {
+            selectedTaskIds.add(taskId);
+            lastSelectedTaskId = taskId;
+        }
+    } else if (event.shiftKey && lastSelectedTaskId) {
+        // Range selection
+        // Need to find visual order of tasks
+        const allTaskEls = Array.from(document.querySelectorAll('.task-item'));
+        const allIds = allTaskEls.map(el => el.dataset.id);
+
+        const startIdx = allIds.indexOf(lastSelectedTaskId);
+        const endIdx = allIds.indexOf(taskId);
+
+        if (startIdx !== -1 && endIdx !== -1) {
+            const low = Math.min(startIdx, endIdx);
+            const high = Math.max(startIdx, endIdx);
+
+            // Add all in range
+            for (let i = low; i <= high; i++) {
+                selectedTaskIds.add(allIds[i]);
+            }
+        }
+    } else {
+        // Simple click - select only this one (unless right click, handled context menu separately)
+        // If simply clicking, we clear others
+        selectedTaskIds.clear();
+        selectedTaskIds.add(taskId);
+        lastSelectedTaskId = taskId;
+    }
+
+    // Update visuals
+    updateSelectionVisuals();
+}
+
+function updateSelectionVisuals() {
+    document.querySelectorAll('.task-item').forEach(el => {
+        if (selectedTaskIds.has(el.dataset.id)) {
+            el.classList.add('selected');
+        } else {
+            el.classList.remove('selected');
+        }
+    });
+
+    // Update Context Menu Context (if needed later)
+    // Update Button States (Delete Selected)
+    const delBtn = document.getElementById('deleteCompletedBtn');
+    // ^ logic might need adjustment if we have a general delete button
+}
+
 function createTaskElement(task) {
     const el = document.createElement('div');
-    el.className = `task-item${task.completed ? ' completed' : ''}${selectedTaskId === task.id ? ' selected' : ''}`;
+    el.className = `task-item animate-slide-in${task.completed ? ' completed' : ''}`;
+    if (selectedTaskIds.has(task.id)) el.classList.add('selected');
+
     el.tabIndex = 0;
     el.dataset.id = task.id;
 
@@ -2047,8 +2218,8 @@ function createTaskElement(task) {
         }
     }
 
-    el.innerHTML = `<input type="checkbox" class="task-select-checkbox" data-task-id="${task.id}" onchange="toggleMultiSelectTask('${task.id}', this)" title="Seleccionar tarea">
-                    <div class="task-info">${task.name} ${catChip} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
+    // checkbox removed
+    el.innerHTML = `<div class="task-info">${task.name} ${catChip} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="color-btn" data-id="${task.id}" title="Cambiar Color">🎨</button>
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
@@ -2057,29 +2228,25 @@ function createTaskElement(task) {
                         ${remBtn}
                     </div>`;
 
-    // Check if this task is in the multi-select set
-    if (typeof multiSelectedTaskIds !== 'undefined' && multiSelectedTaskIds.has(task.id)) {
-        el.classList.add('multi-selected');
-        const checkbox = el.querySelector('.task-select-checkbox');
-        if (checkbox) checkbox.checked = true;
-    }
 
-    el.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return;
+    // Attach new selection handler
+    el.addEventListener('click', (e) => handleTaskSelection(e, task.id));
 
-        const currentId = el.dataset.id;
-        const isCurrentlySelected = selectedTaskId === currentId;
+    // Right click context menu
+    el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
 
-        selectedTaskId = isCurrentlySelected ? null : currentId;
+        // If the task is not part of the current selection, select it exclusively
+        if (!selectedTaskIds.has(task.id)) {
+            selectedTaskIds.clear();
+            selectedTaskIds.add(task.id);
+            lastSelectedTaskId = task.id;
+            updateSelectionVisuals();
+        }
 
-        document.querySelectorAll('.task-item').forEach(item => {
-            if (item.dataset.id === selectedTaskId) {
-                item.classList.add('selected');
-            } else {
-                item.classList.remove('selected');
-            }
-        });
+        showTaskContextMenu(e, selectedTaskIds);
     });
+
     let pressTimer;
     const startPress = (e) => {
         if (!e.target.closest('button')) pressTimer = setTimeout(() => handleLongPress(task), 500);
@@ -2557,6 +2724,7 @@ async function confirmThenDeleteCompletedTasks() {
             alert(`${gcalErrors} recordatorio(s) de Google Calendar no pudieron ser eliminados (quizás ya no existían o hubo otro error). Se procederá a eliminar las tareas de la lista.`);
         }
         try {
+            await animateTaskExit(ids);
             await deleteMultipleTasksByIds(ids);
             sendSignalToMacroDroid();
             alert(`${ids.length} tarea(s) eliminada(s).`);
@@ -2633,6 +2801,51 @@ function initConfirmBeforeDeleteSetting() {
                 Toast.success('Configuración guardada');
             }
         });
+    }
+}
+
+function initAIConfigUI() {
+    if (typeof AIHelper === 'undefined') return;
+
+    // Ensure helper is initialized
+    AIHelper.init();
+
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const apiKeyInput = document.getElementById('aiApiKey');
+    const allowCatsCheckbox = document.getElementById('allowAICreateCategories');
+    const saveBtn = document.getElementById('saveAIConfigBtn');
+    const statusDiv = document.getElementById('aiStatus');
+    const statusText = document.getElementById('aiStatusText');
+
+    if (providerSelect) providerSelect.value = AIHelper.config.provider;
+    if (apiKeyInput) apiKeyInput.value = AIHelper.config.apiKey;
+    if (allowCatsCheckbox) allowCatsCheckbox.checked = AIHelper.config.allowCategoryCreation;
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const provider = providerSelect.value;
+            const key = apiKeyInput.value.trim();
+            const allowCats = allowCatsCheckbox ? allowCatsCheckbox.checked : false;
+
+            AIHelper.saveConfig(provider, key, allowCats);
+
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.backgroundColor = '#d4edda';
+                statusText.textContent = key ? 'IA Activada y Configurada' : 'Configuración guardada (IA desactivada)';
+            }
+
+            if (typeof Toast !== 'undefined') Toast.success('Configuración de IA guardada');
+        });
+    }
+
+    // Initial Status
+    if (statusDiv && statusText) {
+        if (AIHelper.isAvailable()) {
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#d4edda';
+            statusText.textContent = 'IA Activada';
+        }
     }
 }
 
@@ -2754,6 +2967,7 @@ async function deleteSelectedTasks(selectedIds) {
     }
 
     // Delete Google Calendar events if they exist
+    // Delete Google Calendar events if they exist
     for (const taskId of idsArray) {
         const task = tasks.find(t => t.id === taskId);
         if (task && task.googleCalendarEventId && isGoogleCalendarSignedIn) {
@@ -2765,6 +2979,7 @@ async function deleteSelectedTasks(selectedIds) {
         }
     }
 
+    await animateTaskExit(idsArray);
     await deleteMultipleTasksByIds(idsArray);
     clearMultiSelection();
     sendSignalToMacroDroid();
@@ -2916,6 +3131,7 @@ document.addEventListener('keydown', function (e) {
 // Initialize settings when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
     initConfirmBeforeDeleteSetting();
+    initAIConfigUI();
 });
 
 // Export functions for global access
@@ -2999,6 +3215,9 @@ function initCategoryUI() {
     const addCatBtn = document.getElementById('addCategoryBtn');
     const categoriesListFn = document.getElementById('categoriesList');
 
+    // State for editing
+    let editingCategoryId = null;
+
     if (addCatBtn) {
         // Clone to avoid checking for duplicates
         const newBtn = addCatBtn.cloneNode(true);
@@ -3019,13 +3238,25 @@ function initCategoryUI() {
             }
 
             try {
-                await categoryManager.addCategory(name, emoji, color);
+                if (editingCategoryId) {
+                    await categoryManager.updateCategory(editingCategoryId, { name, emoji, color });
+                    if (typeof Toast !== 'undefined') Toast.success('Categoría actualizada');
+                    // Reset UI
+                    editingCategoryId = null;
+                    newBtn.innerHTML = '➕ Crear';
+                    newBtn.classList.remove('primary'); // Assuming secondary is default
+                    newBtn.classList.add('secondary');
+                } else {
+                    await categoryManager.addCategory(name, emoji, color);
+                    if (typeof Toast !== 'undefined') Toast.success('Categoría creada');
+                }
+
                 nameInput.value = '';
                 emojiInput.value = '';
-                if (typeof Toast !== 'undefined') Toast.success('Categoría creada');
+                colorInput.value = '#4CAF50';
             } catch (e) {
                 console.error(e);
-                alert('Error al crear categoría');
+                alert('Error al guardar categoría');
             }
         });
     }
@@ -3056,22 +3287,77 @@ function initCategoryUI() {
                     <div class="category-emoji">${cat.emoji}</div>
                     <div class="category-name">${cat.name}</div>
                     <div class="category-actions">
+                         <button class="cat-btn edit-cat-btn" data-id="${cat.id}" title="Editar">✏️</button>
                         <button class="cat-btn delete-cat-btn" data-id="${cat.id}" title="Eliminar">🗑️</button>
                     </div>
                 `;
                 categoriesListFn.appendChild(card);
             });
 
-            // Add Listeners to newly created buttons
+            // Delete Listeners
             document.querySelectorAll('.delete-cat-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const btnEl = e.target.closest('button'); // Ensure we get the button even if clicking icon
+                    const btnEl = e.target.closest('button');
                     if (confirm('¿Eliminar categoría? Las tareas pasarán a "Sin Categoría".')) {
                         await categoryManager.deleteCategory(btnEl.dataset.id);
+                        // Also reset edit mode if we deleted the creating one (rare)
+                        if (editingCategoryId === btnEl.dataset.id) {
+                            editingCategoryId = null;
+                            document.getElementById('addCategoryBtn').innerHTML = '➕ Crear';
+                            document.getElementById('newCatName').value = '';
+                            document.getElementById('newCatEmoji').value = '';
+                        }
                         if (typeof Toast !== 'undefined') Toast.success('Categoría eliminada');
                     }
                 });
             });
+
+            // Edit Listeners
+            document.querySelectorAll('.edit-cat-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const btnEl = e.target.closest('button');
+                    const catId = btnEl.dataset.id;
+                    const cat = categories.find(c => c.id === catId);
+                    if (cat) {
+                        editingCategoryId = catId;
+                        document.getElementById('newCatName').value = cat.name;
+                        document.getElementById('newCatEmoji').value = cat.emoji;
+                        document.getElementById('newCatColor').value = cat.color;
+
+                        const mainBtn = document.getElementById('addCategoryBtn');
+                        mainBtn.innerHTML = '💾 Guardar';
+                        mainBtn.classList.remove('secondary');
+                        mainBtn.classList.add('primary'); // Make it pop
+
+                        // Scroll to form
+                        document.querySelector('.settings-section h4').scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
         });
+    }
+}
+
+// Initialize settings
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof initConfirmBeforeDeleteSetting === 'function') initConfirmBeforeDeleteSetting();
+    if (typeof initAIConfigUI === 'function') initAIConfigUI();
+});
+
+async function animateTaskExit(taskIds) {
+    const ids = Array.isArray(taskIds) ? taskIds : [taskIds];
+    const promises = [];
+
+    ids.forEach(id => {
+        const el = document.querySelector(`.task-item[data-id="${id}"]`);
+        if (el) {
+            el.classList.add('animate-slide-out');
+            const p = new Promise(resolve => setTimeout(resolve, 300));
+            promises.push(p);
+        }
+    });
+
+    if (promises.length > 0) {
+        await Promise.all(promises);
     }
 }

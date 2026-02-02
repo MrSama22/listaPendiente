@@ -256,10 +256,10 @@ window.loadAIConfigFromFirebase = async function (userId) {
         console.log('🔄 Cargando configuración de IA desde Firestore...');
         const doc = await database.collection('users').doc(userId)
             .collection('settings').doc('api_configuration').get();
-        
+
         if (doc.exists) {
             const data = doc.data();
-            
+
             // 1. Guardar en localStorage para persistencia rápida
             localStorage.setItem('aiProvider', data.provider);
             localStorage.setItem('aiApiKey', data.apiKey);
@@ -269,7 +269,7 @@ window.loadAIConfigFromFirebase = async function (userId) {
                 AIHelper.config.provider = data.provider;
                 AIHelper.config.apiKey = data.apiKey;
                 AIHelper.config.enabled = true; // Forzamos la habilitación
-                
+
                 console.log('✅ AIHelper activado con éxito');
             }
 
@@ -280,7 +280,7 @@ window.loadAIConfigFromFirebase = async function (userId) {
             if (apiKeyInput) apiKeyInput.value = data.apiKey;
 
             if (typeof window.updateAIStatus === 'function') window.updateAIStatus();
-            
+
             Toast.success('🤖 IA lista para usar');
         }
     } catch (error) {
@@ -316,41 +316,41 @@ if (saveAIConfigButton) {
     const newBtn = document.getElementById('saveAIConfigBtn');
 
     newBtn.addEventListener('click', async () => {
-    console.log('--- Iniciando guardado de API Key ---');
-    
-    // FORZAMOS obtener el usuario actual directamente de Firebase
-    const user = firebase.auth().currentUser; 
-    const provider = document.getElementById('aiProviderSelect')?.value;
-    const apiKey = document.getElementById('aiApiKey')?.value.trim();
+        console.log('--- Iniciando guardado de API Key ---');
 
-    if (!apiKey) {
-        Toast.warning('Por favor ingresa una API Key');
-        return;
-    }
+        // FORZAMOS obtener el usuario actual directamente de Firebase
+        const user = firebase.auth().currentUser;
+        const provider = document.getElementById('aiProviderSelect')?.value;
+        const apiKey = document.getElementById('aiApiKey')?.value.trim();
 
-    if (!user) {
-        Toast.error('Firebase aún no reconoce tu sesión. Intenta en 2 segundos.');
-        return;
-    }
+        if (!apiKey) {
+            Toast.warning('Por favor ingresa una API Key');
+            return;
+        }
 
-    try {
-        // Usamos user.uid directamente aquí
-        await window.db.collection('users').doc(user.uid)
-            .collection('settings').doc('api_configuration').set({
-                provider: provider,
-                apiKey: apiKey,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
+        if (!user) {
+            Toast.error('Firebase aún no reconoce tu sesión. Intenta en 2 segundos.');
+            return;
+        }
 
-        console.log('✅ ¡LOGRADO! Campo api_configuration creado en Firebase');
-        Toast.success('Configuración guardada en tu perfil');
-        
-        if (typeof window.updateAIStatus === 'function') window.updateAIStatus();
-        
-    } catch (error) {
-        console.error('❌ Error de Firebase:', error);
-        Toast.error('Error de permisos. Revisa las Reglas de Firestore.');
-    }
+        try {
+            // Usamos user.uid directamente aquí
+            await window.db.collection('users').doc(user.uid)
+                .collection('settings').doc('api_configuration').set({
+                    provider: provider,
+                    apiKey: apiKey,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+            console.log('✅ ¡LOGRADO! Campo api_configuration creado en Firebase');
+            Toast.success('Configuración guardada en tu perfil');
+
+            if (typeof window.updateAIStatus === 'function') window.updateAIStatus();
+
+        } catch (error) {
+            console.error('❌ Error de Firebase:', error);
+            Toast.error('Error de permisos. Revisa las Reglas de Firestore.');
+        }
     });
 }
 
@@ -445,6 +445,7 @@ if (saveGcalCustomizationBtn) {
         const eventColor = document.getElementById('gcalEventColor').value;
         const reminderMinutes = parseInt(document.getElementById('gcalReminderMinutes').value);
         const reminderMethod = document.getElementById('gcalReminderMethod').value;
+        const syncCategoryColors = document.getElementById('syncCalendarCategoryColors')?.checked || false;
 
         const config = {
             titleTemplate,
@@ -452,7 +453,8 @@ if (saveGcalCustomizationBtn) {
             eventDuration,
             eventColor,
             reminderMinutes,
-            reminderMethod
+            reminderMethod,
+            syncCategoryColors
         };
 
         if (typeof GCalCustomization !== 'undefined') {
@@ -480,3 +482,46 @@ if (saveGcalCustomizationBtn) {
 }
 
 console.log('✨ Enhanced features loaded: Glassmorphism, AI Helper, Drag & Drop, Toast Notifications, Task Colors');
+
+// Calendar Color Personalization
+document.addEventListener('DOMContentLoaded', () => {
+    const calendarColorPicker = document.getElementById('calendarHeaderColorPicker');
+    const resetCalendarColorBtn = document.getElementById('resetCalendarColorBtn');
+
+    if (calendarColorPicker) {
+        const savedColor = localStorage.getItem('calendarHeaderColor') || '#4CAF50';
+        calendarColorPicker.value = savedColor;
+        applyCalendarHeaderColor(savedColor);
+
+        calendarColorPicker.addEventListener('input', (e) => {
+            const color = e.target.value;
+            applyCalendarHeaderColor(color);
+            localStorage.setItem('calendarHeaderColor', color);
+        });
+
+        if (resetCalendarColorBtn) {
+            resetCalendarColorBtn.addEventListener('click', () => {
+                const defaultColor = '#4CAF50';
+                calendarColorPicker.value = defaultColor;
+                applyCalendarHeaderColor(defaultColor);
+                localStorage.setItem('calendarHeaderColor', defaultColor);
+            });
+        }
+    }
+});
+
+function applyCalendarHeaderColor(color) {
+    let styleTag = document.getElementById('calendar-custom-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'calendar-custom-style';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+        .calendar-header { background-color: ${color} !important; }
+        .calendar-day.today .calendar-day-number { background-color: ${color} !important; }
+        .calendar-btn { background-color: ${color}; }
+        .calendar-btn:hover { filter: brightness(0.9); }
+    `;
+}
+window.applyCalendarHeaderColor = applyCalendarHeaderColor;

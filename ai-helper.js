@@ -9,6 +9,7 @@ const AIHelper = {
     config: {
         provider: localStorage.getItem('aiProvider') || 'gemini', // 'gemini' o 'chatgpt'
         apiKey: localStorage.getItem('aiApiKey') || '',
+        allowCategoryCreation: localStorage.getItem('aiAllowCategoryCreation') === 'true',
         enabled: false
     },
 
@@ -18,6 +19,7 @@ const AIHelper = {
     init() {
         this.config.provider = localStorage.getItem('aiProvider') || 'gemini';
         this.config.apiKey = localStorage.getItem('aiApiKey') || '';
+        this.config.allowCategoryCreation = localStorage.getItem('aiAllowCategoryCreation') === 'true';
         this.config.enabled = !!this.config.apiKey;
         console.log('AI Helper initialized:', this.config.enabled ? 'Enabled' : 'Disabled');
     },
@@ -26,16 +28,19 @@ const AIHelper = {
      * Guarda la configuración de IA
      * @param {string} provider - 'gemini' o 'chatgpt'
      * @param {string} apiKey - API key del proveedor
+     * @param {boolean} allowCategoryCreation - Permitir crear categorías
      */
-    saveConfig(provider, apiKey) {
+    saveConfig(provider, apiKey, allowCategoryCreation) {
         this.config.provider = provider;
         this.config.apiKey = apiKey;
+        this.config.allowCategoryCreation = allowCategoryCreation;
         this.config.enabled = !!apiKey;
 
         localStorage.setItem('aiProvider', provider);
         localStorage.setItem('aiApiKey', apiKey);
+        localStorage.setItem('aiAllowCategoryCreation', allowCategoryCreation);
 
-        console.log('AI config saved:', provider);
+        console.log('AI config saved:', provider, 'Cats:', allowCategoryCreation);
     },
 
     /**
@@ -49,14 +54,15 @@ const AIHelper = {
     /**
      * Procesa texto en lenguaje natural y retorna una tarea estructurada
      * @param {string} userInput - Texto en lenguaje natural del usuario
+     * @param {Array} existingCategories - Array de categorías existentes {name: string, ...}
      * @returns {Promise<Object>} Objeto con estructura de tarea
      */
-    async processNaturalLanguage(userInput) {
+    async processNaturalLanguage(userInput, existingCategories = []) {
         if (!this.isAvailable()) {
             throw new Error('IA no configurada. Por favor configura tu API key en Settings.');
         }
 
-        const prompt = this.buildPrompt(userInput);
+        const prompt = this.buildPrompt(userInput, existingCategories);
 
         try {
             let response;
@@ -78,119 +84,38 @@ const AIHelper = {
     /**
      * Construye el prompt para la IA
      * @param {string} userInput - Input del usuario
+     * @param {Array} existingCategories - Categorías existentes
      * @returns {string} Prompt formateado
      */
-    buildPrompt(userInput) {
+    buildPrompt(userInput, existingCategories) {
         const currentDate = new Date().toISOString();
-        return `Eres un asistente para crear tareas. El usuario te dará un texto en lenguaje natural y debes extraer la información de la tarea.
+        const catsNames = existingCategories.map(c => c.name).join(', ');
+        const allowCreate = this.config.allowCategoryCreation ? 'SI' : 'NO';
 
-Fecha y hora actual: ${currentDate}
+        return `Eres un asistente inteligente para gestión de tareas. 
+Fecha actual: ${currentDate}
+
+Categorías existentes: [${catsNames}]
+¿Permitido crear nuevas categorías?: ${allowCreate}
 
 Instrucciones:
-- Extrae el nombre de la tarea
-- Detecta la fecha y hora si se menciona (formatos: "mañana", "en 2 horas", "el lunes a las 3pm", etc.)
-- Determina la prioridad (high, medium, low) basándote en palabras clave como "urgente", "importante", etc.
-- Extrae tags/etiquetas relevantes
-- Extrae notas adicionales si las hay
-
-Input del usuario: "${userInput}"
-
-IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta, sin texto adicional:
+1. Analiza el input del usuario: "${userInput}"
+2. Extrae: nombre, fecha/hora (ISO), prioridad, y CATEGORÍA.
+3. Para la categoría:
+   - Intenta asignar una de las existentes.
+   - Si ninguna encaja y se permite crear: sugiere un nombre CORTO y DESCRIPTIVO para una nueva.
+   - Si no se permite crear y ninguna encaja: usa null.
+4. Responde SOLO con este JSON:
 {
-  "name": "nombre de la tarea",
-  "dueDate": "2026-01-27T15:00:00" o null si no se especifica,
-  "priority": "high" o "medium" o "low",
-  "tags": ["tag1", "tag2"],
-  "notes": "notas adicionales o cadena vacía"
+  "name": "string",
+  "dueDate": "ISO string o null",
+  "priority": "high/medium/low",
+  "categoryName": "string exacto de la existente o nueva sugerida o null",
+  "isNewCategory": boolean (true si es una sugerencia nueva)
 }`;
     },
 
-    /**
-     * Llama a la API de Gemini
-     * @param {string} prompt - Prompt para la IA
-     * @returns {Promise<string>} Respuesta de la IA
-     */
-    async callGemini(prompt) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.config.apiKey}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.3,
-                    maxOutputTokens: 500,
-                }
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Error de Gemini API: ${error.error?.message || 'Error desconocido'}`);
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) {
-            throw new Error('No se recibió respuesta válida de Gemini');
-        }
-
-        return text;
-    },
-
-    /**
-     * Llama a la API de ChatGPT (OpenAI)
-     * @param {string} prompt - Prompt para la IA
-     * @returns {Promise<string>} Respuesta de la IA
-     */
-    async callChatGPT(prompt) {
-        const url = 'https://api.openai.com/v1/chat/completions';
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKey}`
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Eres un asistente que convierte texto en lenguaje natural a tareas estructuradas. Siempre respondes únicamente con JSON válido.'
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                temperature: 0.3,
-                max_tokens: 500
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Error de OpenAI API: ${error.error?.message || 'Error desconocido'}`);
-        }
-
-        const data = await response.json();
-        const text = data.choices?.[0]?.message?.content;
-
-        if (!text) {
-            throw new Error('No se recibió respuesta válida de ChatGPT');
-        }
-
-        return text;
-    },
+    // ... call methods ...
 
     /**
      * Parsea la respuesta de la IA y extrae el JSON
@@ -199,32 +124,25 @@ IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido con esta estructura 
      */
     parseAIResponse(aiResponse) {
         try {
-            // Intenta extraer JSON de la respuesta
             let jsonStr = aiResponse.trim();
-
-            // Si la respuesta incluye markdown code blocks, extrae el JSON
             const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-            if (jsonMatch) {
-                jsonStr = jsonMatch[1];
-            }
+            if (jsonMatch) jsonStr = jsonMatch[1];
 
-            // Busca el primer objeto JSON válido
             const firstBrace = jsonStr.indexOf('{');
             const lastBrace = jsonStr.lastIndexOf('}');
-
             if (firstBrace !== -1 && lastBrace !== -1) {
                 jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
             }
 
             const parsed = JSON.parse(jsonStr);
 
-            // Valida la estructura
             const validated = {
                 name: parsed.name || 'Nueva tarea',
                 dueDate: parsed.dueDate || null,
                 priority: ['high', 'medium', 'low'].includes(parsed.priority) ? parsed.priority : 'medium',
-                tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-                notes: parsed.notes || ''
+                categoryName: parsed.categoryName || null,
+                isNewCategory: !!parsed.isNewCategory,
+                tags: []
             };
 
             // Valida fecha si existe

@@ -88,8 +88,18 @@ button:disabled {
 }
 
 .task-item.selected {
-    background-color: #a9c8df;
+    background-color: #bbdefb !important;
+    /* Azul más claro */
     border-radius: 10px;
+    box-shadow: 0 0 0 2px #2196F3;
+    /* Borde de selección visible */
+    transform: scale(1.005);
+    z-index: 2;
+}
+
+/* Ocultar checkbox si aún existe en HTML antiguo, aunque se borrará */
+.task-select-checkbox {
+    display: none !important;
 }
 
 /* --- INICIO DE MODIFICACIONES --- */

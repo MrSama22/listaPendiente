@@ -7,6 +7,7 @@
     <title>Gestor de Tareas</title>
     <link rel="stylesheet" href="style-shared.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
     <link id="dark-mode-stylesheet" rel="stylesheet" href="style-dark.css" disabled>
     <link rel="icon" href="image-removebg-preview (11) (1).png">
     <meta name="google-site-verification" content="uQ0D2C2PkkNbkkRwoI_q8WUabb2rG409DZMmsliV0wU" />
@@ -258,6 +259,17 @@ Prioridad: {priority}</textarea>
                     </div>
 
                     <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="syncCalendarCategoryColors" style="width: auto; margin: 0;">
+                            Sincronizar color con la Categoría
+                        </label>
+                        <small
+                            style="color: #666; font-size: 12px; display: block; margin-top: 5px; margin-left: 24px;">
+                            Prioriza el color de la categoría sobre el color por defecto.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="gcalEventColor">Color del Evento:</label>
                         <select id="gcalEventColor">
                             <option value="1">Lavanda</option>
@@ -371,6 +383,20 @@ Prioridad: {priority}</textarea>
 
                         <hr style="margin: 25px 0;">
 
+                        <h4>Personalización del Calendario</h4>
+                        <div class="form-group"
+                            style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px;">
+                            <label for="calendarHeaderColorPicker">Color del Encabezado</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="color" id="calendarHeaderColorPicker" value="#4CAF50"
+                                    style="width: 50px; height: 40px; padding: 2px; cursor: pointer; border-radius: 4px; border: 1px solid #ddd;">
+                                <button id="resetCalendarColorBtn"
+                                    style="padding: 5px 10px; font-size: 12px; background: #757575;">Restablecer</button>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 25px 0;">
+
                         <div class="form-group">
                             <label for="timeFormatSelect">Formato de Hora</label>
                             <select id="timeFormatSelect">
@@ -404,6 +430,13 @@ Prioridad: {priority}</textarea>
                             <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
                                 La API key se guarda localmente en tu navegador y no se comparte.
                             </small>
+                        </div>
+
+                        <div class="form-group"
+                            style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                            <input type="checkbox" id="allowAICreateCategories" style="width: auto; margin: 0;">
+                            <label for="allowAICreateCategories" style="margin: 0; cursor: pointer;">Permitir a la IA
+                                crear nuevas categorías automáticamente</label>
                         </div>
 
                         <button id="saveAIConfigBtn" class="ai-button">Guardar Configuración de IA</button>
