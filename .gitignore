@@ -1,0 +1,7 @@
+.antigravity/
+.gemini/
+.clawdbot/
+node_modules/
+.vscode/
+.git/
+*.log
