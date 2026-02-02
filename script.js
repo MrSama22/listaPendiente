@@ -1709,9 +1709,17 @@ auth.onAuthStateChanged(async user => {
             window.loadAIConfigFromFirebase(user.uid);
         }
 
-        // Initialize Categories
+        // Initialize Categories y forzar repintado al cargar
         if (window.categoryManager) {
             window.categoryManager.init(user.uid);
+
+            // Suscribirse para repintar las tareas apenas lleguen las categorías
+            window.categoryManager.subscribe(() => {
+                console.log('🔄 Categorías cargadas: Actualizando lista y calendario...');
+                renderTasks();    // Vuelve a pintar la lista principal
+                renderCalendar(); // Vuelve a pintar el calendario con los colores correctos
+            });
+
             initCategoryUI();
         }
 
@@ -2507,7 +2515,7 @@ function addTasksToCalendarDay(dayEl, date) {
             timeS = `<span style="opacity: 0.8; font-size: 0.9em;">${formatTime(td)}</span> - `;
         }
         
-        taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div><strong>${t.name}</strong>`;
+        taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div>${t.name}`;
         dayEl.appendChild(taskEl);
     });
 }
@@ -3453,24 +3461,56 @@ function renderCategoryFilters(categories) {
     const container = document.getElementById('categoryFilters');
     if (!container) return;
 
-    // Add 'All' option
-    let html = `<div class="filter-chip ${currentCategoryFilter === 'all' ? 'active' : ''}" onclick="window.applyCategoryFilter('all')">Todas</div>`;
+    // 1. Opción "Todas" (Estilo base)
+    let html = `<div class="filter-chip ${currentCategoryFilter === 'all' ? 'active' : ''}" 
+                     onclick="window.applyCategoryFilter('all')">Todas</div>`;
 
-    // Add Uncategorized
-    html += `<div class="filter-chip ${currentCategoryFilter === 'uncategorized' ? 'active' : ''}" onclick="window.applyCategoryFilter('uncategorized')">Sin Categoría</div>`;
+    // 2. Opción "Sin Categoría" (Estilo base)
+    html += `<div class="filter-chip ${currentCategoryFilter === 'uncategorized' ? 'active' : ''}" 
+                  onclick="window.applyCategoryFilter('uncategorized')">Sin Categoría</div>`;
 
-    // Add Categories
-    // Use window.categoryManager.categories if available, or empty
+    // 3. Categorías Personalizadas (Estilo Dinámico Tintado)
     const safeCats = categories || (window.categoryManager ? window.categoryManager.categories : []);
-
-    // Sort alphabetical
     const sortedCats = [...safeCats].sort((a, b) => a.name.localeCompare(b.name));
 
     sortedCats.forEach(cat => {
-        html += `<div class="filter-chip ${currentCategoryFilter === cat.id ? 'active' : ''}" 
+        const isActive = currentCategoryFilter === cat.id;
+        const color = cat.color || '#555';
+        
+        let bgStyle = '';
+
+        if (typeof hexToRgba === 'function') {
+            // --- AQUÍ ESTÁ EL CAMBIO PARA QUE SE VEA COMO LA IMAGEN 2 ---
+            
+            // Fondo: Color con 20% de opacidad (igual que tu chip de tarea)
+            const bgColor = hexToRgba(color, 0.20); 
+            
+            // Borde: Color con 40% de opacidad
+            const borderColor = hexToRgba(color, 0.40);
+
+            if (isActive) {
+                // Si está activo, lo hacemos un poco más fuerte para que se note la selección
+                bgStyle = `background-color: ${hexToRgba(color, 0.4)} !important; 
+                           color: ${color} !important; 
+                           border: 1px solid ${color} !important;
+                           font-weight: bold;
+                           box-shadow: 0 0 12px ${hexToRgba(color, 0.3)};
+                           transform: scale(1.05);`;
+            } else {
+                // ESTADO NORMAL: Exactamente como pediste
+                bgStyle = `background-color: ${bgColor}; 
+                           color: ${color}; 
+                           border: 1px solid ${borderColor};`;
+            }
+        } else {
+            // Fallback si falla la conversión
+            bgStyle = `border-color: ${color}; color: ${color}`;
+        }
+
+        html += `<div class="filter-chip ${isActive ? 'active' : ''}" 
             onclick="window.applyCategoryFilter('${cat.id}')" 
-            style="border-color: ${cat.color}">
-            <span style="font-size: 14px;">${cat.emoji}</span> ${cat.name}
+            style="${bgStyle}">
+            <span style="font-size: 14px; margin-right: 5px;">${cat.emoji}</span> ${cat.name}
         </div>`;
     });
 
