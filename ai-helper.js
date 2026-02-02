@@ -115,7 +115,52 @@ Instrucciones:
 }`;
     },
 
-    // ... call methods ...
+    async callGemini(prompt) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.config.apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }]
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || 'Error invocando Gemini API');
+        }
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
+    },
+
+    async callChatGPT(prompt) {
+        const url = 'https://api.openai.com/v1/chat/completions';
+        const payload = {
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.config.apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || 'Error invocando ChatGPT API');
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
+    },
 
     /**
      * Parsea la respuesta de la IA y extrae el JSON

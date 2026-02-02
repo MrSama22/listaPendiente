@@ -435,6 +435,24 @@ if (saveGcalCustomizationBtn) {
     if (typeof GCalCustomization !== 'undefined') {
         setTimeout(() => {
             GCalCustomization.loadConfigIntoUI();
+
+            // Sync Duplicate Checkbox
+            const mainSync = document.getElementById('syncCalendarCategoryColors');
+            const dupSync = document.getElementById('syncCalendarCategoryColorsDuplicate');
+
+            if (mainSync && dupSync) {
+                dupSync.checked = mainSync.checked;
+
+                dupSync.addEventListener('change', () => {
+                    mainSync.checked = dupSync.checked;
+                    // Auto-save by triggering the main save button
+                    saveGcalCustomizationBtn.click();
+                });
+
+                mainSync.addEventListener('change', () => {
+                    dupSync.checked = mainSync.checked;
+                });
+            }
         }, 500);
     }
 
