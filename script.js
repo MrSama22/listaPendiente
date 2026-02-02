@@ -142,7 +142,7 @@ function hexToRgba(hex, alpha) {
         r = parseInt(hex[1] + hex[1], 16);
         g = parseInt(hex[2] + hex[2], 16);
         b = parseInt(hex[3] + hex[3], 16);
-    } 
+    }
     // Manejo de 6 dígitos (#FFFFFF)
     else if (hex.length === 7) {
         r = parseInt(hex.slice(1, 3), 16);
@@ -2303,42 +2303,95 @@ function createTaskElement(task) {
 
 
     // Attach new selection handler
+    // On desktop: click to select/deselect (logic in handleTaskSelection covers this)
     el.addEventListener('click', (e) => handleTaskSelection(e, task.id));
 
-    // Right click context menu
+    // Right click context menu (Desktop)
     el.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-
-        // If the task is not part of the current selection, select it exclusively
+        // If unselected, select it exclusively
         if (!selectedTaskIds.has(task.id)) {
             selectedTaskIds.clear();
             selectedTaskIds.add(task.id);
             lastSelectedTaskId = task.id;
             updateSelectionVisuals();
         }
-
         showTaskContextMenu(e, selectedTaskIds);
     });
 
-    let pressTimer;
-    const startPress = (e) => {
-        if (!e.target.closest('button')) {
-            pressTimer = setTimeout(() => {
-                if (navigator.vibrate) navigator.vibrate(50);
-                if (selectedTaskIds.has(task.id)) {
-                    selectedTaskIds.delete(task.id);
-                } else {
-                    selectedTaskIds.add(task.id);
-                    lastSelectedTaskId = task.id;
-                }
-                updateSelectionVisuals();
-            }, 600);
+    // --- Mobile Interactions ---
+    // Double Tap: Toggle Selection (Multi-select)
+    // Long Press: Open Context Menu
+
+    let touchStartTime = 0;
+    let longPressTimer = null;
+    let lastTapTime = 0;
+    let isLongPress = false;
+
+    el.addEventListener('touchstart', (e) => {
+        // Ignorar si tocamos botones de acción
+        if (e.target.closest('button')) return;
+
+        touchStartTime = Date.now();
+        isLongPress = false;
+
+        // Detectar Doble Tap (Gap < 300ms)
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTapTime;
+        if (tapLength < 300 && tapLength > 0) {
+            // DOUBLE TAP DETECTED -> Toggle Selection
+            e.preventDefault(); // Evitar zoom nativo
+            clearTimeout(longPressTimer); // Cancelar long press si iba a ocurrir
+
+            if (navigator.vibrate) navigator.vibrate(50);
+
+            if (selectedTaskIds.has(task.id)) {
+                selectedTaskIds.delete(task.id);
+            } else {
+                selectedTaskIds.add(task.id);
+            }
+            updateSelectionVisuals();
+            lastTapTime = 0; // Reset
+            return;
         }
-    };
-    const cancelPress = () => clearTimeout(pressTimer);
-    el.addEventListener('mousedown', startPress);
-    el.addEventListener('touchstart', startPress, { passive: true });
-    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
+        lastTapTime = currentTime;
+
+        // Iniciar Timer para Long Press
+        longPressTimer = setTimeout(() => {
+            isLongPress = true;
+            if (navigator.vibrate) navigator.vibrate(100);
+
+            // Seleccionar tarea si no lo está (para que el menú tenga contexto)
+            if (!selectedTaskIds.has(task.id)) {
+                selectedTaskIds.clear();
+                selectedTaskIds.add(task.id);
+                updateSelectionVisuals();
+            }
+
+            // Mostrar Menú Contextual simula evento contextmenu
+            // Necesitamos coordenadas del toque
+            const touch = e.touches[0];
+            const fakeEvent = {
+                preventDefault: () => { },
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+                target: el
+            };
+            showTaskContextMenu(fakeEvent, selectedTaskIds);
+        }, 600); // 600ms para long press
+    }, { passive: false });
+
+    el.addEventListener('touchend', (e) => {
+        clearTimeout(longPressTimer);
+        // Si fue long press, ya se manejó.
+        // Si fue un tap normal, dejamos que el evento 'click' se dispare normalmente.
+    });
+
+    el.addEventListener('touchmove', (e) => {
+        // Si movemos el dedo, cancelamos el long press
+        clearTimeout(longPressTimer);
+    });
+
     return el;
 }
 
@@ -2453,71 +2506,71 @@ function addTasksToCalendarDay(dayEl, date) {
         if (!parsedDate) return false;
         return parsedDate.toDateString() === date.toDateString();
     })
-    .sort((a, b) => {
-        const dateA = parseTaskDate(a.dueDate);
-        const dateB = parseTaskDate(b.dueDate);
-        if (!dateA || !dateB) return 0;
-        if (dateA.getHours() === 23 && dateA.getMinutes() === 59 && (dateB.getHours() !== 23 || dateB.getMinutes() !== 59)) return 1;
-        if (dateB.getHours() === 23 && dateB.getMinutes() === 59 && (dateA.getHours() !== 23 || dateA.getMinutes() !== 59)) return -1;
-        if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
-        return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
-    })
-    .forEach(t => {
-        const taskEl = document.createElement('div');
-        taskEl.className = 'calendar-task';
-        taskEl.dataset.id = t.id;
-        taskEl.draggable = true;
-        taskEl.addEventListener('dragstart', handleDragStart);
-        taskEl.addEventListener('dragend', handleDragEnd);
-        taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
-        taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
-        taskEl.addEventListener('touchend', handleTouchEnd);
+        .sort((a, b) => {
+            const dateA = parseTaskDate(a.dueDate);
+            const dateB = parseTaskDate(b.dueDate);
+            if (!dateA || !dateB) return 0;
+            if (dateA.getHours() === 23 && dateA.getMinutes() === 59 && (dateB.getHours() !== 23 || dateB.getMinutes() !== 59)) return 1;
+            if (dateB.getHours() === 23 && dateB.getMinutes() === 59 && (dateA.getHours() !== 23 || dateA.getMinutes() !== 59)) return -1;
+            if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
+            return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
+        })
+        .forEach(t => {
+            const taskEl = document.createElement('div');
+            taskEl.className = 'calendar-task';
+            taskEl.dataset.id = t.id;
+            taskEl.draggable = true;
+            taskEl.addEventListener('dragstart', handleDragStart);
+            taskEl.addEventListener('dragend', handleDragEnd);
+            taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+            taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+            taskEl.addEventListener('touchend', handleTouchEnd);
 
-        // --- LÓGICA DE COLOR DE CATEGORÍA ---
-        
-        // 1. Color por defecto (pastel aleatorio guardado en la tarea)
-        let finalColor = getTaskColor(t.id);
-        
-        // 2. Verificar si el usuario activó la sincronización en Ajustes
-        const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
+            // --- LÓGICA DE COLOR DE CATEGORÍA ---
 
-        // 3. Si está activo y la tarea tiene categoría, buscamos el color "OFICIAL"
-        if (syncLocal && t.categoryId && window.categoryManager) {
-            const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
-            if (cat && cat.color) {
-                finalColor = cat.color; // Usamos el color de la categoría (ej: Cyan)
+            // 1. Color por defecto (pastel aleatorio guardado en la tarea)
+            let finalColor = getTaskColor(t.id);
+
+            // 2. Verificar si el usuario activó la sincronización en Ajustes
+            const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
+
+            // 3. Si está activo y la tarea tiene categoría, buscamos el color "OFICIAL"
+            if (syncLocal && t.categoryId && window.categoryManager) {
+                const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
+                if (cat && cat.color) {
+                    finalColor = cat.color; // Usamos el color de la categoría (ej: Cyan)
+                }
             }
-        }
 
-        // --- APLICACIÓN DE ESTILOS VISUALES ---
+            // --- APLICACIÓN DE ESTILOS VISUALES ---
 
-        // Borde izquierdo sólido del color de la categoría
-        taskEl.style.borderLeft = `4px solid ${finalColor}`;
+            // Borde izquierdo sólido del color de la categoría
+            taskEl.style.borderLeft = `4px solid ${finalColor}`;
 
-        // Fondo: Usamos el helper para hacerlo semitransparente (estilo "Vidrio tintado")
-        // Si es modo oscuro, esto se verá como un color oscuro tintado.
-        if (finalColor.startsWith('#')) {
-            // Opacidad 0.25 (25%) para que se note el color pero no sea chillón
-            taskEl.style.backgroundColor = hexToRgba(finalColor, 0.25);
-        } else {
-            // Fallback si el color no es HEX (ej: hsl)
-            taskEl.style.backgroundColor = finalColor; 
-            taskEl.style.opacity = '0.8';
-        }
+            // Fondo: Usamos el helper para hacerlo semitransparente (estilo "Vidrio tintado")
+            // Si es modo oscuro, esto se verá como un color oscuro tintado.
+            if (finalColor.startsWith('#')) {
+                // Opacidad 0.25 (25%) para que se note el color pero no sea chillón
+                taskEl.style.backgroundColor = hexToRgba(finalColor, 0.25);
+            } else {
+                // Fallback si el color no es HEX (ej: hsl)
+                taskEl.style.backgroundColor = finalColor;
+                taskEl.style.opacity = '0.8';
+            }
 
-        // Color del texto (Heredado para que se ajuste al modo oscuro/claro automáticamente)
-        taskEl.style.color = 'inherit'; 
+            // Color del texto (Heredado para que se ajuste al modo oscuro/claro automáticamente)
+            taskEl.style.color = 'inherit';
 
-        // Formato de hora y nombre
-        const td = parseTaskDate(t.dueDate);
-        let timeS = '';
-        if (td && !t.dueDate.toUpperCase().includes('TN/A') && (td.getHours() !== 23 || td.getMinutes() !== 59)) {
-            timeS = `<span style="opacity: 0.8; font-size: 0.9em;">${formatTime(td)}</span> - `;
-        }
-        
-        taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div>${t.name}`;
-        dayEl.appendChild(taskEl);
-    });
+            // Formato de hora y nombre
+            const td = parseTaskDate(t.dueDate);
+            let timeS = '';
+            if (td && !t.dueDate.toUpperCase().includes('TN/A') && (td.getHours() !== 23 || td.getMinutes() !== 59)) {
+                timeS = `<span style="opacity: 0.8; font-size: 0.9em;">${formatTime(td)}</span> - `;
+            }
+
+            taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div>${t.name}`;
+            dayEl.appendChild(taskEl);
+        });
 }
 
 // ---- Drag and Drop Handlers ----
@@ -3476,15 +3529,15 @@ function renderCategoryFilters(categories) {
     sortedCats.forEach(cat => {
         const isActive = currentCategoryFilter === cat.id;
         const color = cat.color || '#555';
-        
+
         let bgStyle = '';
 
         if (typeof hexToRgba === 'function') {
             // --- AQUÍ ESTÁ EL CAMBIO PARA QUE SE VEA COMO LA IMAGEN 2 ---
-            
+
             // Fondo: Color con 20% de opacidad (igual que tu chip de tarea)
-            const bgColor = hexToRgba(color, 0.20); 
-            
+            const bgColor = hexToRgba(color, 0.20);
+
             // Borde: Color con 40% de opacidad
             const borderColor = hexToRgba(color, 0.40);
 
