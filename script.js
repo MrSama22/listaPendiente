@@ -134,7 +134,23 @@ const pastelColors = [
 function getRandomPastelColor() {
     return pastelColors[Math.floor(Math.random() * pastelColors.length)];
 }
-
+// Función para convertir HEX a RGBA con opacidad (para el fondo)
+function hexToRgba(hex, alpha) {
+    let r = 0, g = 0, b = 0;
+    // Manejo de 3 dígitos (#FFF)
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } 
+    // Manejo de 6 dígitos (#FFFFFF)
+    else if (hex.length === 7) {
+        r = parseInt(hex.slice(1, 3), 16);
+        g = parseInt(hex.slice(3, 5), 16);
+        b = parseInt(hex.slice(5, 7), 16);
+    }
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 function getTaskColor(taskId) {
     const savedColor = localStorage.getItem(`taskColor_${taskId}`);
     if (savedColor) {
@@ -2417,7 +2433,7 @@ function createCalendarDay(dayN, isOtherM, isTodayF = false) {
 }
 
 function addTasksToCalendarDay(dayEl, date) {
-    // Make the day a drop target
+    // Convertir el elemento del día en un objetivo para soltar (Drag & Drop)
     dayEl.dataset.date = date.toISOString().split('T')[0];
     dayEl.addEventListener('dragover', handleDragOver);
     dayEl.addEventListener('drop', handleDrop);
@@ -2425,79 +2441,75 @@ function addTasksToCalendarDay(dayEl, date) {
 
     tasks.filter(t => {
         if (t.completed) return false;
-        const parsedDate = parseTaskDate(t.dueDate); // <-- Usamos el traductor
+        const parsedDate = parseTaskDate(t.dueDate);
         if (!parsedDate) return false;
-
         return parsedDate.toDateString() === date.toDateString();
     })
-        .sort((a, b) => {
-            const dateA = parseTaskDate(a.dueDate); // <-- Usamos el traductor
-            const dateB = parseTaskDate(b.dueDate); // <-- Usamos el traductor
+    .sort((a, b) => {
+        const dateA = parseTaskDate(a.dueDate);
+        const dateB = parseTaskDate(b.dueDate);
+        if (!dateA || !dateB) return 0;
+        if (dateA.getHours() === 23 && dateA.getMinutes() === 59 && (dateB.getHours() !== 23 || dateB.getMinutes() !== 59)) return 1;
+        if (dateB.getHours() === 23 && dateB.getMinutes() === 59 && (dateA.getHours() !== 23 || dateA.getMinutes() !== 59)) return -1;
+        if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
+        return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
+    })
+    .forEach(t => {
+        const taskEl = document.createElement('div');
+        taskEl.className = 'calendar-task';
+        taskEl.dataset.id = t.id;
+        taskEl.draggable = true;
+        taskEl.addEventListener('dragstart', handleDragStart);
+        taskEl.addEventListener('dragend', handleDragEnd);
+        taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+        taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+        taskEl.addEventListener('touchend', handleTouchEnd);
 
-            if (!dateA || !dateB) return 0;
+        // --- LÓGICA DE COLOR DE CATEGORÍA ---
+        
+        // 1. Color por defecto (pastel aleatorio guardado en la tarea)
+        let finalColor = getTaskColor(t.id);
+        
+        // 2. Verificar si el usuario activó la sincronización en Ajustes
+        const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
 
-            if (dateA.getHours() === 23 && dateA.getMinutes() === 59 && (dateB.getHours() !== 23 || dateB.getMinutes() !== 59)) return 1;
-            if (dateB.getHours() === 23 && dateB.getMinutes() === 59 && (dateA.getHours() !== 23 || dateA.getMinutes() !== 59)) return -1;
-            if (dateA.getTime() !== dateB.getTime()) return dateA.getTime() - dateB.getTime();
-            return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
-        })
-        .forEach(t => {
-            const taskEl = document.createElement('div');
-            taskEl.className = 'calendar-task';
-            taskEl.dataset.id = t.id;
-            taskEl.draggable = true;
-            taskEl.addEventListener('dragstart', handleDragStart);
-            taskEl.addEventListener('dragend', handleDragEnd);
-            // Touch handlers
-            taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
-            taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
-            taskEl.addEventListener('touchend', handleTouchEnd);
-
-
-
-            // Apply task color
-            let taskColor = getTaskColor(t.id);
-            let useCategoryColor = false;
-
-            // Check if we should use category color
-            const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
-            console.log('🎨 Sync Local Colors:', syncLocal, 'Task:', t.name, 'Category ID:', t.categoryId);
-
-            if (syncLocal && t.categoryId) {
-                if (window.categoryManager && window.categoryManager.categories) {
-                    const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
-                    console.log('🔍 Found category:', cat);
-                    if (cat && cat.color) {
-                        taskColor = cat.color;
-                        useCategoryColor = true;
-                        console.log('✅ Using category color:', taskColor, 'for task:', t.name);
-                    } else {
-                        console.log('⚠️ Category has no color or not found');
-                    }
-                } else {
-                    console.log('⚠️ categoryManager not available');
-                }
+        // 3. Si está activo y la tarea tiene categoría, buscamos el color "OFICIAL"
+        if (syncLocal && t.categoryId && window.categoryManager) {
+            const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
+            if (cat && cat.color) {
+                finalColor = cat.color; // Usamos el color de la categoría (ej: Cyan)
             }
+        }
 
-            taskEl.style.borderLeft = `4px solid ${taskColor}`;
+        // --- APLICACIÓN DE ESTILOS VISUALES ---
 
-            // If using category color, make background darker; otherwise use transparent
-            if (useCategoryColor) {
-                // Darken the color for background
-                taskEl.style.backgroundColor = darkenColor(taskColor, 0.3);
-                taskEl.style.color = '#fff';
-            } else {
-                taskEl.style.backgroundColor = taskColor + '30'; // 30% opacity
-            }
+        // Borde izquierdo sólido del color de la categoría
+        taskEl.style.borderLeft = `4px solid ${finalColor}`;
 
-            const td = parseTaskDate(t.dueDate); // <-- Usamos el traductor
-            let timeS = '';
-            if (td && !t.dueDate.toUpperCase().includes('TN/A') && (td.getHours() !== 23 || td.getMinutes() !== 59)) {
-                timeS = `${formatTime(td)} - `;
-            }
-            taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div>${t.name}`;
-            dayEl.appendChild(taskEl);
-        });
+        // Fondo: Usamos el helper para hacerlo semitransparente (estilo "Vidrio tintado")
+        // Si es modo oscuro, esto se verá como un color oscuro tintado.
+        if (finalColor.startsWith('#')) {
+            // Opacidad 0.25 (25%) para que se note el color pero no sea chillón
+            taskEl.style.backgroundColor = hexToRgba(finalColor, 0.25);
+        } else {
+            // Fallback si el color no es HEX (ej: hsl)
+            taskEl.style.backgroundColor = finalColor; 
+            taskEl.style.opacity = '0.8';
+        }
+
+        // Color del texto (Heredado para que se ajuste al modo oscuro/claro automáticamente)
+        taskEl.style.color = 'inherit'; 
+
+        // Formato de hora y nombre
+        const td = parseTaskDate(t.dueDate);
+        let timeS = '';
+        if (td && !t.dueDate.toUpperCase().includes('TN/A') && (td.getHours() !== 23 || td.getMinutes() !== 59)) {
+            timeS = `<span style="opacity: 0.8; font-size: 0.9em;">${formatTime(td)}</span> - `;
+        }
+        
+        taskEl.innerHTML = `<div class="calendar-task-time">${timeS}</div><strong>${t.name}</strong>`;
+        dayEl.appendChild(taskEl);
+    });
 }
 
 // ---- Drag and Drop Handlers ----
