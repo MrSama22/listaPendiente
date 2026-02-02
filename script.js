@@ -3157,6 +3157,15 @@ function hideTaskContextMenu() {
     if (existingMenu) existingMenu.remove();
 }
 
+// Global listener to close context menu when clicking outside
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('taskContextMenu');
+    // Si el menú existe y el click NO fue dentro del menú
+    if (menu && !menu.contains(e.target)) {
+        hideTaskContextMenu();
+    }
+});
+
 // Context Menu Actions
 async function markSelectedAsComplete(selectedIds) {
     const idsArray = Array.from(selectedIds);
