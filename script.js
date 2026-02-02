@@ -157,6 +157,34 @@ function setTaskColor(taskId, color) {
     }
 }
 
+// Helper function to darken a color
+function darkenColor(color, factor = 0.3) {
+    // Convert hex to RGB
+    let r, g, b;
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        r = parseInt(hex.substr(0, 2), 16);
+        g = parseInt(hex.substr(2, 2), 16);
+        b = parseInt(hex.substr(4, 2), 16);
+    } else if (color.startsWith('rgb')) {
+        const match = color.match(/\d+/g);
+        if (match) {
+            [r, g, b] = match.map(Number);
+        } else {
+            return color;
+        }
+    } else {
+        return color;
+    }
+
+    // Darken by factor
+    r = Math.floor(r * (1 - factor));
+    g = Math.floor(g * (1 - factor));
+    b = Math.floor(b * (1 - factor));
+
+    return `rgba(${r}, ${g}, ${b}, 0.8)`;
+}
+
 function showColorPicker(taskId) {
     const currentColor = getTaskColor(taskId);
     const task = tasks.find(t => t.id === taskId);
@@ -2427,6 +2455,7 @@ function addTasksToCalendarDay(dayEl, date) {
 
             // Apply task color
             let taskColor = getTaskColor(t.id);
+            let useCategoryColor = false;
 
             // Check if we should use category color
             const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
@@ -2438,6 +2467,7 @@ function addTasksToCalendarDay(dayEl, date) {
                     console.log('🔍 Found category:', cat);
                     if (cat && cat.color) {
                         taskColor = cat.color;
+                        useCategoryColor = true;
                         console.log('✅ Using category color:', taskColor, 'for task:', t.name);
                     } else {
                         console.log('⚠️ Category has no color or not found');
@@ -2448,7 +2478,15 @@ function addTasksToCalendarDay(dayEl, date) {
             }
 
             taskEl.style.borderLeft = `4px solid ${taskColor}`;
-            taskEl.style.backgroundColor = taskColor + '30'; // 30% opacity
+
+            // If using category color, make background darker; otherwise use transparent
+            if (useCategoryColor) {
+                // Darken the color for background
+                taskEl.style.backgroundColor = darkenColor(taskColor, 0.3);
+                taskEl.style.color = '#fff';
+            } else {
+                taskEl.style.backgroundColor = taskColor + '30'; // 30% opacity
+            }
 
             const td = parseTaskDate(t.dueDate); // <-- Usamos el traductor
             let timeS = '';
