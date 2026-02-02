@@ -1380,3 +1380,146 @@ ul.styled-list {
 
 /*.task-item.completed .task-info{
     /*text-decoration :line-through;}*/
+
+/* CATEGORY MANAGER STYLES */
+.categories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.category-card {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.category-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.category-header-color {
+    width: 100%;
+    height: 6px;
+    border-radius: 6px 6px 0 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.category-emoji {
+    font-size: 32px;
+    margin: 10px 0;
+}
+
+.category-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.category-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 10px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.category-card:hover .category-actions {
+    opacity: 1;
+}
+
+.cat-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+}
+
+.cat-btn:hover {
+    transform: scale(1.2);
+}
+
+/* Category Chip in Task List */
+.category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #555;
+    margin-left: 8px;
+    border: 1px solid transparent;
+}
+
+.category-chip .emoji {
+    font-size: 12px;
+}
+
+/* FILTER BAR STYLES */
+.category-filters-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px 0;
+    margin-bottom: 10px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.category-filters-container::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #e0e0e0;
+    color: #555;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-chip:hover {
+    background: #d0d0d0;
+    transform: translateY(-1px);
+}
+
+.filter-chip.active {
+    background: #333;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.glassmorphism-enabled .filter-chip {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glassmorphism-enabled .filter-chip.active {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}

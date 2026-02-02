@@ -248,20 +248,43 @@ if (timeFormatSelectEl) {
 }
 
 // AI Configuration Functions
-window.loadAIConfigIntoUI = function () {
-    const aiProviderSelectEl = document.getElementById('aiProviderSelect');
-    const aiApiKeyInputEl = document.getElementById('aiApiKey');
+window.loadAIConfigFromFirebase = async function (userId) {
+    const database = window.db;
+    if (!userId || !database) return;
 
-    if (aiProviderSelectEl && aiApiKeyInputEl) {
-        const provider = localStorage.getItem('aiProvider') || 'gemini';
-        const apiKey = localStorage.getItem('aiApiKey') || '';
+    try {
+        console.log('🔄 Cargando configuración de IA desde Firestore...');
+        const doc = await database.collection('users').doc(userId)
+            .collection('settings').doc('api_configuration').get();
+        
+        if (doc.exists) {
+            const data = doc.data();
+            
+            // 1. Guardar en localStorage para persistencia rápida
+            localStorage.setItem('aiProvider', data.provider);
+            localStorage.setItem('aiApiKey', data.apiKey);
 
-        aiProviderSelectEl.value = provider;
-        aiApiKeyInputEl.value = apiKey;
+            // 2. ACTIVAR EL HELPER (Esto es lo que falta)
+            if (typeof AIHelper !== 'undefined') {
+                AIHelper.config.provider = data.provider;
+                AIHelper.config.apiKey = data.apiKey;
+                AIHelper.config.enabled = true; // Forzamos la habilitación
+                
+                console.log('✅ AIHelper activado con éxito');
+            }
 
-        if (typeof updateAIStatus === 'function') {
-            updateAIStatus();
+            // 3. Actualizar la interfaz visual
+            const providerSelect = document.getElementById('aiProviderSelect');
+            const apiKeyInput = document.getElementById('aiApiKey');
+            if (providerSelect) providerSelect.value = data.provider;
+            if (apiKeyInput) apiKeyInput.value = data.apiKey;
+
+            if (typeof window.updateAIStatus === 'function') window.updateAIStatus();
+            
+            Toast.success('🤖 IA lista para usar');
         }
+    } catch (error) {
+        console.error('Error al cargar IA:', error);
     }
 };
 
@@ -284,34 +307,50 @@ window.updateAIStatus = function () {
 
 // AI Configuration Save Button - Saves to Firebase user profile
 // Reemplaza la lógica del botón saveAIConfigBtn en tu código
+// Busca esta sección en app-init.js y reemplázala por completo:
 const saveAIConfigButton = document.getElementById('saveAIConfigBtn');
+
 if (saveAIConfigButton) {
-    saveAIConfigButton.addEventListener('click', async () => {
-        const provider = document.getElementById('aiProviderSelect').value;
-        const apiKey = document.getElementById('aiApiKey').value.trim();
+    // Eliminamos cualquier listener previo para evitar duplicados
+    saveAIConfigButton.replaceWith(saveAIConfigButton.cloneNode(true));
+    const newBtn = document.getElementById('saveAIConfigBtn');
 
-        if (!apiKey) {
-            Toast.warning('Ingresa una clave válida');
-            return;
-        }
+    newBtn.addEventListener('click', async () => {
+    console.log('--- Iniciando guardado de API Key ---');
+    
+    // FORZAMOS obtener el usuario actual directamente de Firebase
+    const user = firebase.auth().currentUser; 
+    const provider = document.getElementById('aiProviderSelect')?.value;
+    const apiKey = document.getElementById('aiApiKey')?.value.trim();
 
-        const userId = window.currentUserId;
-        if (userId && window.db) {
-            try {
-                // .set con merge: true crea el documento si no existe
-                await window.db.collection('users').doc(userId)
-                    .collection('settings').doc('api_configuration').set({
-                        provider: provider,
-                        apiKey: apiKey,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }, { merge: true });
-                
-                Toast.success('API Key vinculada a tu perfil de Jhulian');
-            } catch (error) {
-                console.error('Error de Firebase:', error);
-                Toast.error('Verifica las reglas de seguridad de Firestore');
-            }
-        }
+    if (!apiKey) {
+        Toast.warning('Por favor ingresa una API Key');
+        return;
+    }
+
+    if (!user) {
+        Toast.error('Firebase aún no reconoce tu sesión. Intenta en 2 segundos.');
+        return;
+    }
+
+    try {
+        // Usamos user.uid directamente aquí
+        await window.db.collection('users').doc(user.uid)
+            .collection('settings').doc('api_configuration').set({
+                provider: provider,
+                apiKey: apiKey,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+        console.log('✅ ¡LOGRADO! Campo api_configuration creado en Firebase');
+        Toast.success('Configuración guardada en tu perfil');
+        
+        if (typeof window.updateAIStatus === 'function') window.updateAIStatus();
+        
+    } catch (error) {
+        console.error('❌ Error de Firebase:', error);
+        Toast.error('Error de permisos. Revisa las Reglas de Firestore.');
+    }
     });
 }
 

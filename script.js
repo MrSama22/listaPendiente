@@ -1646,6 +1646,12 @@ auth.onAuthStateChanged(async user => {
             window.loadAIConfigFromFirebase(user.uid);
         }
 
+        // Initialize Categories
+        if (window.categoryManager) {
+            window.categoryManager.init(user.uid);
+            initCategoryUI();
+        }
+
         updateCalendarRelatedUI();
 
         if (!isGoogleCalendarSignedIn && !sessionStorage.getItem('googleSignInPrompted')) {
@@ -1821,6 +1827,10 @@ function showEditModal(taskId) {
     if (!task) return;
     const modal = document.getElementById('editModal');
     modal.querySelector('#editTaskName').value = task.name;
+    // Set category
+    const catSelect = modal.querySelector('#editTaskCategory');
+    if (catSelect) catSelect.value = task.categoryId || '';
+
     const dateInput = modal.querySelector('#editDate');
     const timeInput = modal.querySelector('#editTime');
     const includeTimeCb = modal.querySelector('#includeTime');
@@ -1864,7 +1874,8 @@ function saveEditedTask() {
         } else newDate.setHours(23, 59, 59, 0);
         dueDate = newDate.toISOString();
     }
-    updateTaskDB(currentEditingTaskId, { name: name, dueDate: dueDate })
+    const categoryId = modal.querySelector('#editTaskCategory').value;
+    updateTaskDB(currentEditingTaskId, { name: name, dueDate: dueDate, categoryId: categoryId || null })
         .then(async () => {
             sendSignalToMacroDroid();
             alert('Tarea actualizada.');
@@ -1893,7 +1904,8 @@ function addTask() {
         else newDate.setHours(23, 59, 59, 0);
         dueDate = newDate.toISOString();
     }
-    addTaskDB({ name: name, dueDate: dueDate, completed: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+    const categoryId = document.getElementById('taskCategory').value;
+    addTaskDB({ name: name, dueDate: dueDate, completed: false, categoryId: categoryId || null, createdAt: firebase.firestore.FieldValue.serverTimestamp() })
         .then(() => {
             sendSignalToMacroDroid();
             if (currentUserId && isGoogleCalendarSignedIn) updateAllNonRepeatingGlobalRemindersDescriptions(currentUserId);
@@ -2024,8 +2036,19 @@ function createTaskElement(task) {
     const reminderButtonDisabled = task.completed || !parseTaskDate(task.dueDate) || !isGoogleCalendarSignedIn;
     const remBtn = `<button class="calendar-reminder-btn" data-id="${task.id}" title="${remTitle}" ${reminderButtonDisabled ? 'disabled style="display:none;"' : ''}>${remIcon}</button>`;
 
+    // Category Chip Logic
+    let catChip = '';
+    if (task.categoryId && window.categoryManager) {
+        const cat = window.categoryManager.getCategory(task.categoryId);
+        if (cat) {
+            catChip = `<span class="category-chip" style="background-color: ${cat.color}20; color: ${cat.color}; border: 1px solid ${cat.color}40">
+                <span class="emoji">${cat.emoji}</span> ${cat.name}
+            </span>`;
+        }
+    }
+
     el.innerHTML = `<input type="checkbox" class="task-select-checkbox" data-task-id="${task.id}" onchange="toggleMultiSelectTask('${task.id}', this)" title="Seleccionar tarea">
-                    <div class="task-info">${task.name} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
+                    <div class="task-info">${task.name} ${catChip} | 📅 ${formatDate(task.dueDate)} ${remDays}</div>
                     <div class="task-actions">
                         <button class="color-btn" data-id="${task.id}" title="Cambiar Color">🎨</button>
                         <button class="edit-button" data-id="${task.id}" title="Editar Tarea">✏️</button>
@@ -2089,7 +2112,18 @@ function renderTasks() {
     const complDiv = document.getElementById('completedTasks'), undDiv = document.getElementById('undefinedTasks'), datDiv = document.getElementById('datedTasks');
     if (!complDiv || !undDiv || !datDiv) return;
     complDiv.innerHTML = ''; undDiv.innerHTML = ''; datDiv.innerHTML = '';
-    const pending = tasks.filter(t => !t.completed), completed = tasks.filter(t => t.completed);
+
+    // Filter Tasks
+    let filteredTasks = tasks;
+    if (typeof currentCategoryFilter !== 'undefined' && currentCategoryFilter !== 'all') {
+        if (currentCategoryFilter === 'uncategorized') {
+            filteredTasks = tasks.filter(t => !t.categoryId);
+        } else {
+            filteredTasks = tasks.filter(t => t.categoryId === currentCategoryFilter);
+        }
+    }
+
+    const pending = filteredTasks.filter(t => !t.completed), completed = filteredTasks.filter(t => t.completed);
 
     pending.filter(t => !parseTaskDate(t.dueDate)).sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)).forEach(t => undDiv.appendChild(createTaskElement(t)));
 
@@ -2890,3 +2924,154 @@ window.clearMultiSelection = clearMultiSelection;
 window.multiSelectedTaskIds = multiSelectedTaskIds;
 window.showTaskContextMenu = showTaskContextMenu;
 window.hideTaskContextMenu = hideTaskContextMenu;
+// ---- Filter UI Logic ----
+let currentCategoryFilter = 'all';
+
+function renderCategoryFilters(categories) {
+    const container = document.getElementById('categoryFilters');
+    if (!container) return;
+
+    // Add 'All' option
+    let html = `<div class="filter-chip ${currentCategoryFilter === 'all' ? 'active' : ''}" onclick="window.applyCategoryFilter('all')">Todas</div>`;
+
+    // Add Uncategorized
+    html += `<div class="filter-chip ${currentCategoryFilter === 'uncategorized' ? 'active' : ''}" onclick="window.applyCategoryFilter('uncategorized')">Sin Categoría</div>`;
+
+    // Add Categories
+    // Use window.categoryManager.categories if available, or empty
+    const safeCats = categories || (window.categoryManager ? window.categoryManager.categories : []);
+
+    // Sort alphabetical
+    const sortedCats = [...safeCats].sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedCats.forEach(cat => {
+        html += `<div class="filter-chip ${currentCategoryFilter === cat.id ? 'active' : ''}" 
+            onclick="window.applyCategoryFilter('${cat.id}')" 
+            style="border-color: ${cat.color}">
+            <span style="font-size: 14px;">${cat.emoji}</span> ${cat.name}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function applyCategoryFilter(filter) {
+    currentCategoryFilter = filter;
+    if (window.categoryManager) {
+        renderCategoryFilters(window.categoryManager.categories);
+    }
+    renderTasks();
+}
+
+window.applyCategoryFilter = applyCategoryFilter;
+
+// ---- Category UI Logic ----
+function populateCategorySelects(categories) {
+    const selects = [
+        document.getElementById('taskCategory'),
+        document.getElementById('editTaskCategory')
+    ];
+
+    // Sort alphabetical
+    const sortedCats = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+
+    selects.forEach(select => {
+        if (!select) return;
+        const currentVal = select.value;
+        // Keep "Sin Categoría" option
+        select.innerHTML = '<option value="">Sin Categoría</option>';
+
+        sortedCats.forEach(cat => {
+            const opt = document.createElement('option');
+            opt.value = cat.id;
+            opt.textContent = `${cat.emoji} ${cat.name}`;
+            select.appendChild(opt);
+        });
+
+        // Restore value if still exists
+        if (categories.some(c => c.id === currentVal)) {
+            select.value = currentVal;
+        }
+    });
+}
+
+function initCategoryUI() {
+    const addCatBtn = document.getElementById('addCategoryBtn');
+    const categoriesListFn = document.getElementById('categoriesList');
+
+    if (addCatBtn) {
+        // Clone to avoid checking for duplicates
+        const newBtn = addCatBtn.cloneNode(true);
+        addCatBtn.parentNode.replaceChild(newBtn, addCatBtn);
+
+        newBtn.addEventListener('click', async () => {
+            const nameInput = document.getElementById('newCatName');
+            const emojiInput = document.getElementById('newCatEmoji');
+            const colorInput = document.getElementById('newCatColor');
+
+            const name = nameInput.value;
+            const emoji = emojiInput.value;
+            const color = colorInput.value;
+
+            if (!name) {
+                alert('El nombre es obligatorio');
+                return;
+            }
+
+            try {
+                await categoryManager.addCategory(name, emoji, color);
+                nameInput.value = '';
+                emojiInput.value = '';
+                if (typeof Toast !== 'undefined') Toast.success('Categoría creada');
+            } catch (e) {
+                console.error(e);
+                alert('Error al crear categoría');
+            }
+        });
+    }
+
+    // Subscribe to changes to render
+    if (window.categoryManager) {
+        categoryManager.subscribe(categories => {
+            // Update Selects
+            populateCategorySelects(categories);
+            // Update Filters
+            renderCategoryFilters(categories);
+
+            if (!categoriesListFn) return;
+            categoriesListFn.innerHTML = '';
+            if (categories.length === 0) {
+                categoriesListFn.innerHTML = '<p style="color: #888; grid-column: 1/-1;">No hay categorías creadas.</p>';
+                return;
+            }
+
+            // Sort alphabetical
+            const sortedCats = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+
+            sortedCats.forEach(cat => {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.innerHTML = `
+                    <div class="category-header-color" style="background-color: ${cat.color}"></div>
+                    <div class="category-emoji">${cat.emoji}</div>
+                    <div class="category-name">${cat.name}</div>
+                    <div class="category-actions">
+                        <button class="cat-btn delete-cat-btn" data-id="${cat.id}" title="Eliminar">🗑️</button>
+                    </div>
+                `;
+                categoriesListFn.appendChild(card);
+            });
+
+            // Add Listeners to newly created buttons
+            document.querySelectorAll('.delete-cat-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const btnEl = e.target.closest('button'); // Ensure we get the button even if clicking icon
+                    if (confirm('¿Eliminar categoría? Las tareas pasarán a "Sin Categoría".')) {
+                        await categoryManager.deleteCategory(btnEl.dataset.id);
+                        if (typeof Toast !== 'undefined') Toast.success('Categoría eliminada');
+                    }
+                });
+            });
+        });
+    }
+}

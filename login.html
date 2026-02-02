@@ -102,6 +102,12 @@
             <input type="time" id="taskTime">
         </div>
 
+        <div class="form-group">
+            <label for="taskCategory">Categoría (opcional):</label>
+            <select id="taskCategory" class="category-select">
+                <option value="">Sin Categoría</option>
+            </select>
+        </div>
         <button class="add-task">Añadir Tarea</button>
         <p class="vacio" style="padding-bottom: 1px;">
 
@@ -115,6 +121,10 @@
 
         </div>
 
+
+        <div id="categoryFilters" class="category-filters-container">
+            <!-- Filters injected by JS -->
+        </div>
 
         <div class="task-list">
             <h3 class="section-header">Tareas Completadas:</h3>
@@ -162,6 +172,7 @@
                 <a href="#" data-target="settingsGoogleCalendarSection" class="active">📅 Calendario Google</a>
                 <a href="#" data-target="settingsTaskCleanupSection">🗑️ Limpieza de Tareas</a>
                 <a href="#" data-target="settingsAppearanceSection">🎨 Apariencia</a>
+                <a href="#" data-target="settingsCategoriesSection">📂 Categorías</a>
                 <a href="#" data-target="settingsAISection">✨ Inteligencia Artificial</a>
             </div>
             <div class="settings-content">
@@ -426,6 +437,37 @@ Prioridad: {priority}</textarea>
                         </div>
                     </div>
                 </div>
+
+                <div id="settingsCategoriesSection" class="settings-section" style="display:none;">
+                    <h3>Gestión de Áreas y Categorías</h3>
+                    <div class="categories-section-content">
+                        <p class="settings-description">Organiza tus tareas en áreas personalizadas (ej: Trabajo, Casa,
+                            Estudio).
+                            Estas categorías son opcionales.</p>
+
+                        <div class="form-group" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                            <label>Crear Nueva Categoría</label>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <input type="text" id="newCatName" placeholder="Nombre (ej: Trabajo)" style="flex: 2;">
+                                <input type="text" id="newCatEmoji" placeholder="Emoji (💼)"
+                                    style="flex: 0.5; text-align: center;">
+                                <input type="color" id="newCatColor" value="#4CAF50"
+                                    style="flex: 0.5; height: 38px; padding: 2px;">
+                                <button id="addCategoryBtn" class="secondary" style="flex: 1;">➕ Crear</button>
+                            </div>
+                        </div>
+
+                        <hr style="margin: 20px 0;">
+
+                        <h4>Mis Categorías</h4>
+                        <div id="categoriesList" class="categories-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                            <!-- Categories will be injected here -->
+                            <p style="color: #888; grid-column: 1/-1;">Cargando categorías...</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -450,6 +492,13 @@ Prioridad: {priority}</textarea>
             <div class="form-group" id="timeInputContainer" style="display: none;">
                 <label for="editTime">Hora:</label>
                 <input type="time" id="editTime">
+            </div>
+            <div class="form-group">
+                <label for="editTaskCategory">Categoría:</label>
+                <select id="editTaskCategory" class="category-select"
+                    style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="">Sin Categoría</option>
+                </select>
             </div>
             <button class="save-task" type="button">Guardar</button>
         </div>
@@ -492,6 +541,7 @@ Prioridad: {priority}</textarea>
     <script src="toast-notifications.js"></script>
     <script src="ai-helper.js"></script>
     <script src="gcal-customization.js"></script>
+    <script src="categories.js"></script>
     <script type="module" src="script.js"></script>
     <script src="app-init.js"></script>
     <footer class="app-footer">
