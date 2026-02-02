@@ -283,56 +283,33 @@ window.updateAIStatus = function () {
 };
 
 // AI Configuration Save Button - Saves to Firebase user profile
+// Reemplaza la lógica del botón saveAIConfigBtn en tu código
 const saveAIConfigButton = document.getElementById('saveAIConfigBtn');
 if (saveAIConfigButton) {
     saveAIConfigButton.addEventListener('click', async () => {
-        const aiProviderSelectEl = document.getElementById('aiProviderSelect');
-        const aiApiKeyInputEl = document.getElementById('aiApiKey');
-
-        const provider = aiProviderSelectEl ? aiProviderSelectEl.value : 'gemini';
-        const apiKey = aiApiKeyInputEl ? aiApiKeyInputEl.value.trim() : '';
+        const provider = document.getElementById('aiProviderSelect').value;
+        const apiKey = document.getElementById('aiApiKey').value.trim();
 
         if (!apiKey) {
-            if (typeof Toast !== 'undefined') {
-                Toast.warning('Por favor ingresa una API Key');
-            } else {
-                alert('Por favor ingresa una API Key');
-            }
+            Toast.warning('Ingresa una clave válida');
             return;
         }
 
-        // Save to localStorage immediately
-        localStorage.setItem('aiProvider', provider);
-        localStorage.setItem('aiApiKey', apiKey);
-
-        if (typeof AIHelper !== 'undefined') {
-            AIHelper.saveConfig(provider, apiKey);
-
-            // Save to Firebase if user is logged in
-            const userId = window.currentUserId;
-            const database = window.db;
-            if (userId && database) {
-                try {
-                    // Using 'api_configuration' as requested by user
-                    await database.collection('users').doc(userId).collection('settings').doc('api_configuration').set({
+        const userId = window.currentUserId;
+        if (userId && window.db) {
+            try {
+                // .set con merge: true crea el documento si no existe
+                await window.db.collection('users').doc(userId)
+                    .collection('settings').doc('api_configuration').set({
                         provider: provider,
                         apiKey: apiKey,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log('✅ AI config saved to Firebase (api_configuration) for user:', userId);
-                } catch (error) {
-                    console.error('Error saving AI config to Firebase:', error);
-                }
-            }
-
-            if (typeof updateAIStatus === 'function') {
-                updateAIStatus();
-            }
-
-            if (typeof Toast !== 'undefined') {
-                Toast.success('Configuración de IA guardada en tu perfil');
-            } else {
-                alert('Configuración de IA guardada en tu perfil');
+                    }, { merge: true });
+                
+                Toast.success('API Key vinculada a tu perfil de Jhulian');
+            } catch (error) {
+                console.error('Error de Firebase:', error);
+                Toast.error('Verifica las reglas de seguridad de Firestore');
             }
         }
     });
