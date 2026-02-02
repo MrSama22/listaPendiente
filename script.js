@@ -3103,6 +3103,13 @@ function showTaskContextMenu(event, selectedIds) {
     menu.id = 'taskContextMenu';
 
     const menuItems = [
+        {
+            icon: '☑️', text: 'Seleccionar todas', action: () => {
+                document.querySelectorAll('.task-item').forEach(el => selectedTaskIds.add(el.dataset.id));
+                updateSelectionVisuals();
+            }
+        },
+        { divider: true },
         { icon: '✅', text: `Marcar ${selectedIds.size} como completadas`, action: () => markSelectedAsComplete(selectedIds) },
         { icon: '🎨', text: 'Cambiar color de todas', action: () => showBulkColorPicker(selectedIds) },
         { icon: '📅', text: 'Editar fecha y hora', action: () => showBulkDateEditor(selectedIds) },
