@@ -42,6 +42,14 @@ class CategoryManager {
                 });
                 this.notifySubscribers();
                 console.log('📂 Categories updated:', this.categories.length);
+
+                // Re-render calendar if sync local colors is enabled
+                if (localStorage.getItem('syncLocalCategoryColors') === 'true') {
+                    if (typeof renderCalendar === 'function') {
+                        console.log('🔄 Re-rendering calendar with new category colors');
+                        renderCalendar();
+                    }
+                }
             }, (error) => {
                 console.error("Error listening to categories:", error);
             });
