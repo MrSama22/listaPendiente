@@ -2423,8 +2423,19 @@ function addTasksToCalendarDay(dayEl, date) {
             taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
             taskEl.addEventListener('touchend', handleTouchEnd);
 
+
             // Apply task color
-            const taskColor = getTaskColor(t.id);
+            let taskColor = getTaskColor(t.id);
+
+            // Check if we should use category color
+            const syncLocal = localStorage.getItem('syncLocalCategoryColors') === 'true';
+            if (syncLocal && t.categoryId && window.categoryManager) {
+                const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
+                if (cat && cat.color) {
+                    taskColor = cat.color;
+                }
+            }
+
             taskEl.style.borderLeft = `4px solid ${taskColor}`;
             taskEl.style.backgroundColor = taskColor + '30'; // 30% opacity
 

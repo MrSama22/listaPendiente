@@ -543,3 +543,26 @@ function applyCalendarHeaderColor(color) {
     `;
 }
 window.applyCalendarHeaderColor = applyCalendarHeaderColor;
+
+// Local Calendar Category Color Sync
+document.addEventListener('DOMContentLoaded', () => {
+    const syncLocalCheckbox = document.getElementById('syncLocalCategoryColors');
+
+    if (syncLocalCheckbox) {
+        // Load saved setting
+        const savedSetting = localStorage.getItem('syncLocalCategoryColors') === 'true';
+        syncLocalCheckbox.checked = savedSetting;
+
+        // Save on change and re-render calendar
+        syncLocalCheckbox.addEventListener('change', (e) => {
+            localStorage.setItem('syncLocalCategoryColors', e.target.checked);
+            // Re-render calendar to apply color changes
+            if (typeof renderCalendar === 'function') {
+                renderCalendar();
+            }
+            if (typeof Toast !== 'undefined') {
+                Toast.success(e.target.checked ? 'Colores de categoría activados en calendario' : 'Colores aleatorios restaurados en calendario');
+            }
+        });
+    }
+});
