@@ -1628,7 +1628,9 @@ document.addEventListener('click', function (event) {
             editTaskReminder(task.id);
         }
     } else if (!target.closest('.task-item') && !target.closest('.modal-content') && !target.closest('.settings-sidebar a') && !target.closest('.settings-icon-btn') && !target.closest('.settings-header button') && !target.closest('#commandInput') && !target.closest('.add-task-button')) {
-        if (selectedTaskId !== null) { selectedTaskId = null; renderTasks(); }
+        if (typeof window.clearMultiSelection === 'function' && window.multiSelectedTaskIds && window.multiSelectedTaskIds.size > 0) {
+            window.clearMultiSelection();
+        }
     }
 });
 
@@ -2179,6 +2181,8 @@ function createTaskElement(task) {
     el.tabIndex = 0;
     el.dataset.id = task.id;
 
+    // Mobile Long Press for Multi-selection
+
     // Apply task color
     const taskColor = getTaskColor(task.id);
     el.style.borderLeft = `5px solid ${taskColor}`;
@@ -2249,11 +2253,22 @@ function createTaskElement(task) {
 
     let pressTimer;
     const startPress = (e) => {
-        if (!e.target.closest('button')) pressTimer = setTimeout(() => handleLongPress(task), 500);
+        if (!e.target.closest('button')) {
+            pressTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(50);
+                if (selectedTaskIds.has(task.id)) {
+                    selectedTaskIds.delete(task.id);
+                } else {
+                    selectedTaskIds.add(task.id);
+                    lastSelectedTaskId = task.id;
+                }
+                updateSelectionVisuals();
+            }, 600);
+        }
     };
     const cancelPress = () => clearTimeout(pressTimer);
     el.addEventListener('mousedown', startPress);
-    el.addEventListener('touchstart', startPress);
+    el.addEventListener('touchstart', startPress, { passive: true });
     ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => el.addEventListener(evt, cancelPress));
     return el;
 }
@@ -2386,6 +2401,10 @@ function addTasksToCalendarDay(dayEl, date) {
             taskEl.draggable = true;
             taskEl.addEventListener('dragstart', handleDragStart);
             taskEl.addEventListener('dragend', handleDragEnd);
+            // Touch handlers
+            taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
+            taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+            taskEl.addEventListener('touchend', handleTouchEnd);
 
             // Apply task color
             const taskColor = getTaskColor(t.id);
@@ -2899,6 +2918,8 @@ function showTaskContextMenu(event, selectedIds) {
         { icon: '✅', text: `Marcar ${selectedIds.size} como completadas`, action: () => markSelectedAsComplete(selectedIds) },
         { icon: '🎨', text: 'Cambiar color de todas', action: () => showBulkColorPicker(selectedIds) },
         { icon: '📅', text: 'Editar fecha y hora', action: () => showBulkDateEditor(selectedIds) },
+        { icon: '🔔', text: 'Crear Recordatorio Global', action: () => createGlobalReminderFromSelection(selectedIds) },
+        { icon: '⏰', text: 'Recordatorios Individuales', action: () => createIndividualRemindersFromSelection(selectedIds) },
         { divider: true },
         { icon: '🗑️', text: `Eliminar ${selectedIds.size} tareas`, action: () => deleteSelectedTasks(selectedIds), danger: true }
     ];
@@ -3139,7 +3160,201 @@ window.toggleMultiSelectTask = toggleMultiSelectTask;
 window.clearMultiSelection = clearMultiSelection;
 window.multiSelectedTaskIds = multiSelectedTaskIds;
 window.showTaskContextMenu = showTaskContextMenu;
-window.hideTaskContextMenu = hideTaskContextMenu;
+
+// Batch Reminder Functions
+function featureCheckGCal() {
+    if (!currentUserId || !isGoogleCalendarSignedIn) {
+        alert('Debes estar conectado a Google Calendar en Ajustes.');
+        return false;
+    }
+    return true;
+}
+
+async function createGlobalReminderFromSelection(selectedIds) {
+    if (!featureCheckGCal()) return;
+
+    // Create payload
+    const tasksList = [];
+    selectedIds.forEach(id => {
+        const t = tasks.find(x => x.id === id);
+        if (t) tasksList.push(t);
+    });
+
+    if (tasksList.length === 0) return;
+
+    const summary = `Resumen: ${tasksList.length} Tareas Pendientes`;
+    const description = tasksList.map(t => `• ${t.name} (${t.priority || 'Normal'})`).join('\n') + '\n\nGenerado por Task Manager';
+
+    // Open modal to pick date
+    showBatchReminderModal('global', selectedIds, { summary, description });
+}
+
+async function createIndividualRemindersFromSelection(selectedIds) {
+    if (!featureCheckGCal()) return;
+    showBatchReminderModal('individual', selectedIds, {});
+}
+
+function showBatchReminderModal(mode, selectedIds, data) {
+    const modalId = 'batchReminderModal';
+    let existingModal = document.getElementById(modalId);
+    if (existingModal) existingModal.remove();
+
+    const title = mode === 'global' ? 'Crear Recordatorio Global' : 'Crear Recordatorios Individuales';
+    const content = mode === 'global'
+        ? `<p>Se creará UN evento en Google Calendar con la lista de las ${selectedIds.size} tareas.</p>`
+        : `<p>Se crearán ${selectedIds.size} eventos SEPARADOS, uno por cada tarea.</p>`;
+
+    const useDueDatesOption = mode === 'individual'
+        ? `<div class="form-group" style="margin-top:10px;">
+             <label style="cursor:pointer; display:flex; align-items:center; gap:10px;">
+                <input type="radio" name="reminderType" value="dueDate" checked>
+                Usar la fecha/hora de vencimiento de cada tarea (si tiene)
+             </label>
+             <label style="cursor:pointer; display:flex; align-items:center; gap:10px; margin-top:5px;">
+                <input type="radio" name="reminderType" value="fixed">
+                Usar una fecha/hora específica para todas
+             </label>
+           </div>`
+        : '';
+
+    const nowPlus1h = new Date(Date.now() + 60 * 60 * 1000);
+    const dateStr = nowPlus1h.toISOString().slice(0, 16);
+
+    const modalHTML = `
+        <div class="modal" id="${modalId}" style="display: block;">
+            <div class="modal-content">
+                <span class="close-btn" onclick="document.getElementById('${modalId}').remove()">&times;</span>
+                <h3>${title}</h3>
+                ${content}
+                ${useDueDatesOption}
+                
+                <div id="batchDateContainer" class="form-group" style="${mode === 'individual' ? 'display:none; margin-left: 20px;' : ''}">
+                    <label>Fecha y Hora del Evento:</label>
+                    <input type="datetime-local" id="batchReminderDate" value="${dateStr}" style="width: 100%; padding: 8px;">
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button id="confirmBatchReminderBtn" style="flex:1;">Crear Recordatorio(s)</button>
+                    <button onclick="document.getElementById('${modalId}').remove()" class="secondary" style="flex:1;">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Logic for toggle
+    if (mode === 'individual') {
+        const radios = document.getElementsByName('reminderType');
+        const container = document.getElementById('batchDateContainer');
+        radios.forEach(r => {
+            r.addEventListener('change', (e) => {
+                container.style.display = e.target.value === 'fixed' ? 'block' : 'none';
+            });
+        });
+    }
+
+    document.getElementById('confirmBatchReminderBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('confirmBatchReminderBtn');
+        btn.disabled = true;
+        btn.innerText = 'Procesando...';
+
+        try {
+            if (mode === 'global') {
+                const dateVal = document.getElementById('batchReminderDate').value;
+                if (!dateVal) throw new Error("Fecha requerida");
+                const start = new Date(dateVal);
+                const end = new Date(start.getTime() + 60 * 60000); // 1 hour
+
+                await makeAuthenticatedApiCall(() => gapi.client.calendar.events.insert({
+                    calendarId: 'primary',
+                    resource: {
+                        summary: data.summary,
+                        description: data.description,
+                        start: { dateTime: start.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                        end: { dateTime: end.toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+                        reminders: { useDefault: true }
+                    }
+                }), 'Crear Recordatorio Global');
+
+                Toast.success('Recordatorio global creado');
+
+            } else { // INDIVIDUAL
+                const type = document.querySelector('input[name="reminderType"]:checked').value;
+                const fixedDateVal = document.getElementById('batchReminderDate').value;
+
+                let createdCount = 0;
+
+                const ids = Array.from(selectedIds);
+                for (const id of ids) {
+                    const task = tasks.find(t => t.id === id);
+                    if (!task) continue;
+
+                    let targetDate;
+                    if (type === 'fixed') {
+                        targetDate = new Date(fixedDateVal);
+                    } else {
+                        // Use task due date or skip if none
+                        const taskD = parseTaskDate(task.dueDate);
+                        // If no due date, default to tomorrow same time? Or skip?
+                        // Let's default to tomorrow 9am if missing
+                        if (taskD) {
+                            targetDate = taskD;
+                            // If user didn't set time (e.g. 23:59), set to 9am? 
+                            // Current parseTaskDate handling sets 23:59 for date-only.
+                            if (taskD.getHours() === 23 && taskD.getMinutes() === 59) {
+                                targetDate.setHours(9, 0, 0, 0);
+                            }
+                        } else {
+                            // Skip or default? Let's skip to avoid spamming wrong times
+                            continue;
+                        }
+                    }
+
+                    // Create event wrapper using GCalCustomization if avail
+                    let eventResource;
+                    if (typeof GCalCustomization !== 'undefined') {
+                        eventResource = GCalCustomization.createEventObject(task, targetDate);
+                    } else {
+                        const end = new Date(targetDate.getTime() + 60 * 60000);
+                        eventResource = {
+                            summary: `Tarea: ${task.name}`,
+                            start: { dateTime: targetDate.toISOString() },
+                            end: { dateTime: end.toISOString() }
+                        };
+                    }
+
+                    // Insert
+                    const resp = await makeAuthenticatedApiCall(() => gapi.client.calendar.events.insert({
+                        calendarId: 'primary',
+                        resource: eventResource
+                    }));
+
+                    // Link to task
+                    if (resp.result.id) {
+                        await updateTaskDB(task.id, { googleCalendarEventId: resp.result.id });
+                        task.googleCalendarEventId = resp.result.id;
+                        createdCount++;
+                    }
+                }
+                Toast.success(`${createdCount} recordatorios creados.`);
+            }
+
+            document.getElementById(modalId).remove();
+            clearMultiSelection();
+            sendSignalToMacroDroid();
+            renderTasks();
+
+        } catch (e) {
+            console.error(e);
+            alert('Error: ' + e.message);
+            btn.disabled = false;
+            btn.innerText = 'Intentar de nuevo';
+        }
+    });
+}
+window.createGlobalReminderFromSelection = createGlobalReminderFromSelection;
+window.createIndividualRemindersFromSelection = createIndividualRemindersFromSelection;
 // ---- Filter UI Logic ----
 let currentCategoryFilter = 'all';
 

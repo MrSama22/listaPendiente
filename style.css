@@ -1533,3 +1533,19 @@ ul.styled-list {
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
+
+/* Mobile Drag & Drop */
+.touch-dragging-clone {
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.8;
+}
+
+.touch-dragging-source {
+    opacity: 0.4;
+}
+
+.calendar-day.touch-drag-over {
+    background-color: rgba(76, 175, 80, 0.2);
+    border: 2px dashed #4CAF50;
+}
