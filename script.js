@@ -2182,6 +2182,9 @@ function formatDate(dateStr) {
 
 // ---- Advanced Selection Logic ----
 function handleTaskSelection(event, taskId) {
+    // Cerrar menú contextual si está abierto (para evitar superposiciones)
+    if (typeof hideTaskContextMenu === 'function') hideTaskContextMenu();
+
     // If clicking a button inside the task, ignore selection
     if (event.target.closest('button') || event.target.closest('input')) return;
 
@@ -3157,13 +3160,15 @@ function hideTaskContextMenu() {
     if (existingMenu) existingMenu.remove();
 }
 
-// Global listener to close context menu when clicking outside
-document.addEventListener('click', (e) => {
-    const menu = document.getElementById('taskContextMenu');
-    // Si el menú existe y el click NO fue dentro del menú
-    if (menu && !menu.contains(e.target)) {
-        hideTaskContextMenu();
-    }
+// Global listeners to close context menu to ensure it closes on any interaction
+['click', 'mousedown', 'touchstart'].forEach(eventType => {
+    document.addEventListener(eventType, (e) => {
+        const menu = document.getElementById('taskContextMenu');
+        // Si el menú existe y la interacción NO fue dentro del menú
+        if (menu && !menu.contains(e.target)) {
+            hideTaskContextMenu();
+        }
+    }, { passive: true });
 });
 
 // Context Menu Actions
