@@ -3160,13 +3160,36 @@ function hideTaskContextMenu() {
     if (existingMenu) existingMenu.remove();
 }
 
-// Global listeners to close context menu to ensure it closes on any interaction
+// Helper to clear selection
+function clearTaskSelection() {
+    if (typeof selectedTaskIds !== 'undefined') {
+        selectedTaskIds.clear();
+        lastSelectedTaskId = null;
+        if (typeof updateSelectionVisuals === 'function') updateSelectionVisuals();
+    }
+}
+window.clearTaskSelection = clearTaskSelection;
+
+// Global listeners to close context menu and clear selection on interaction outside
 ['click', 'mousedown', 'touchstart'].forEach(eventType => {
     document.addEventListener(eventType, (e) => {
+        // 1. Close Context Menu
         const menu = document.getElementById('taskContextMenu');
-        // Si el menú existe y la interacción NO fue dentro del menú
         if (menu && !menu.contains(e.target)) {
             hideTaskContextMenu();
+        }
+
+        // 2. Clear Task Selection (hides .task-actions if they depend on selection)
+        // Ignorar si el click fue DENTRO de una tarea o en un botón de control
+        if (!e.target.closest('.task-item') && !e.target.closest('.task-context-menu')) {
+            // Ignorar también si estamos scroleando (en touchstart es difícil saber, pero en click sí)
+            // Para mousedown/touchstart, limpiamos si no es una tarea
+            // Pero ojo con los botones de la interfaz (New Task, Settings, etc)
+            // Si el usuario toca el botón de "Agregar", no pasa nada si se deselecciona la tarea.
+
+            // Solo limpiamos si REALMENTE tocamos el fondo o contenedores generales
+            // O simplemente: si no es tarea ni menú, limpiamos.
+            clearTaskSelection();
         }
     }, { passive: true });
 });
