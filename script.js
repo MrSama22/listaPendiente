@@ -3510,7 +3510,7 @@ function renderCategoryFilters(categories) {
         html += `<div class="filter-chip ${isActive ? 'active' : ''}" 
             onclick="window.applyCategoryFilter('${cat.id}')" 
             style="${bgStyle}">
-            <span style="font-size: 14px; margin-right: 5px;">${cat.emoji}</span> ${cat.name}
+            <span style="font-size: 14px; margin-right: 0px;">${cat.emoji}</span> ${cat.name}
         </div>`;
     });
 
