@@ -313,13 +313,13 @@ if (saveAIConfigButton) {
             const database = window.db;
             if (userId && database) {
                 try {
-                    // Using 'ai_settings' as the document name now
-                    await database.collection('users').doc(userId).collection('settings').doc('ai_settings').set({
+                    // Using 'api_configuration' as requested by user
+                    await database.collection('users').doc(userId).collection('settings').doc('api_configuration').set({
                         provider: provider,
                         apiKey: apiKey,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    console.log('✅ AI config saved to Firebase (ai_settings) for user:', userId);
+                    console.log('✅ AI config saved to Firebase (api_configuration) for user:', userId);
                 } catch (error) {
                     console.error('Error saving AI config to Firebase:', error);
                 }
@@ -347,8 +347,9 @@ window.loadAIConfigFromFirebase = async function (userId) {
     }
 
     try {
-        // Using 'ai_settings' now
-        const doc = await database.collection('users').doc(userId).collection('settings').doc('ai_settings').get();
+        // Using 'api_configuration' as requested
+        console.log('🔄 Attempting to load AI config from api_configuration...');
+        const doc = await database.collection('users').doc(userId).collection('settings').doc('api_configuration').get();
         if (doc.exists) {
             const data = doc.data();
             if (data.provider && data.apiKey) {
@@ -381,10 +382,17 @@ window.loadAIConfigFromFirebase = async function (userId) {
                     updateAIStatus();
                 }
 
-                console.log('✅ AI config loaded and applied from Firebase:', data.provider);
+                // Show success message to user
+                if (typeof Toast !== 'undefined') {
+                    Toast.success('🤖 API Key cargada automáticamente');
+                }
+
+                console.log('✅ AI configuration successfully loaded and applied from api_configuration');
+
+                // console.log('✅ AI config loaded and applied from Firebase:', data.provider); // Removed duplicate log
             }
         } else {
-            console.log('No AI config found in Firebase for user:', userId);
+            console.log('⚠️ No api_configuration document found for user:', userId);
         }
     } catch (error) {
         console.error('Error loading AI config from Firebase:', error);
