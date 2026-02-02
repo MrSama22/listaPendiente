@@ -471,47 +471,59 @@ async function initializeGoogleCalendar() {
         gapi = window.gapi;
         google = window.google;
         if (!gapi || !google) {
-            console.error("Google API script not loaded.");
-            throw new Error("Google API script not loaded.");
+            console.warn("Google API script not loaded yet.");
+            // Don't throw, just return. Maybe connection issue.
+            return;
         }
 
+        // Load GAPI Client
         await new Promise((resolve, reject) => {
-            gapi.load('client', { callback: resolve, onerror: reject, timeout: 5000, ontimeout: reject });
+            if (gapi.client) resolve();
+            else gapi.load('client', { callback: resolve, onerror: reject });
         });
 
-        await gapi.client.init({
-            apiKey: GOOGLE_CONFIG.API_KEY,
-            discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC],
-        });
-        console.log('GAPI client initialized with discovery doc.');
+        // Init Client
+        try {
+            await gapi.client.init({
+                apiKey: GOOGLE_CONFIG.API_KEY,
+                discoveryDocs: [GOOGLE_CONFIG.DISCOVERY_DOC],
+            });
+            console.log('GAPI client initialized.');
+        } catch (initError) {
+            console.error("GAPI client init failed:", initError);
+            // Verify if we can proceed without init (maybe minimal functional?)
+            // Usually no.
+            throw initError;
+        }
 
-
-        google.accounts.id.initialize({
-            client_id: GOOGLE_CONFIG.CLIENT_ID,
-            callback: (response) => {
-                console.log('GIS ID Initialize Callback (ID Token):', response);
-            }
-        });
-        console.log('GIS ID services initialized.');
+        // Init GIS
+        if (google.accounts && google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                callback: (response) => console.log('GIS ID Callback:', response)
+            });
+            console.log('GIS ID initialized.');
+        }
 
         const savedToken = localStorage.getItem('googleAccessToken');
         if (savedToken) {
-            gapi.client.setToken({ access_token: savedToken });
+            if (gapi.client) gapi.client.setToken({ access_token: savedToken });
             isGoogleCalendarSignedIn = true;
-            console.log('Found saved Google access token. Google Calendar connected.');
+            console.log('Restored Google Calendar connection.');
         } else {
             isGoogleCalendarSignedIn = false;
-            console.log('No saved Google access token found. Google Calendar not connected.');
         }
 
-        console.log('Google Calendar API integration initialized.');
         updateCalendarRelatedUI();
 
         if (isGoogleCalendarSignedIn && currentUserId) {
-            renderGlobalRemindersList();
-            renderIndividualTaskRemindersList();
-            await checkAndCleanUpOverdueTaskReminders();
-            startRepeatingRemindersUpdateInterval();
+            // These might fail if GAPI not ready
+            try {
+                renderGlobalRemindersList();
+                renderIndividualTaskRemindersList();
+                await checkAndCleanUpOverdueTaskReminders();
+                startRepeatingRemindersUpdateInterval();
+            } catch (e) { console.warn("Error rendering GCal lists:", e); }
         }
 
     } catch (error) {
@@ -530,7 +542,12 @@ function signInToGoogle() {
         scope: GOOGLE_CONFIG.SCOPES,
         callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
-                gapi.client.setToken(tokenResponse);
+                if (gapi.client) {
+                    gapi.client.setToken(tokenResponse);
+                } else {
+                    console.error("GAPI client not ready during sign-in.");
+                    // Attempt late init?
+                }
                 isGoogleCalendarSignedIn = true;
                 localStorage.setItem('googleAccessToken', tokenResponse.access_token);
                 alert('Conectado a Google Calendar exitosamente!');
