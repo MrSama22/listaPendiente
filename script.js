@@ -2319,57 +2319,40 @@ function createTaskElement(task) {
         showTaskContextMenu(e, selectedTaskIds);
     });
 
-    // --- Mobile Interactions ---
-    // Double Tap: Toggle Selection (Multi-select)
-    // Long Press: Open Context Menu
+    // --- Mobile Interactions Robustas ---
 
     let touchStartTime = 0;
     let longPressTimer = null;
     let lastTapTime = 0;
+    let singleTapTimer = null;
+    let isScrolling = false;
     let isLongPress = false;
+    let startX = 0;
+    let startY = 0;
 
     el.addEventListener('touchstart', (e) => {
-        // Ignorar si tocamos botones de acción
-        if (e.target.closest('button')) return;
+        // Ignorar botones
+        if (e.target.closest('button') || e.target.closest('input')) return;
 
         touchStartTime = Date.now();
         isLongPress = false;
+        isScrolling = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
 
-        // Detectar Doble Tap (Gap < 300ms)
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTapTime;
-        if (tapLength < 300 && tapLength > 0) {
-            // DOUBLE TAP DETECTED -> Toggle Selection
-            e.preventDefault(); // Evitar zoom nativo
-            clearTimeout(longPressTimer); // Cancelar long press si iba a ocurrir
-
-            if (navigator.vibrate) navigator.vibrate(50);
-
-            if (selectedTaskIds.has(task.id)) {
-                selectedTaskIds.delete(task.id);
-            } else {
-                selectedTaskIds.add(task.id);
-            }
-            updateSelectionVisuals();
-            lastTapTime = 0; // Reset
-            return;
-        }
-        lastTapTime = currentTime;
-
-        // Iniciar Timer para Long Press
+        // Long Press Timer
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            if (navigator.vibrate) navigator.vibrate(100);
+            if (navigator.vibrate) navigator.vibrate(50);
 
-            // Seleccionar tarea si no lo está (para que el menú tenga contexto)
+            // Long Press -> Context Menu
+            // Seleccionar exclusivamente para menu
             if (!selectedTaskIds.has(task.id)) {
                 selectedTaskIds.clear();
                 selectedTaskIds.add(task.id);
                 updateSelectionVisuals();
             }
 
-            // Mostrar Menú Contextual simula evento contextmenu
-            // Necesitamos coordenadas del toque
             const touch = e.touches[0];
             const fakeEvent = {
                 preventDefault: () => { },
@@ -2378,18 +2361,71 @@ function createTaskElement(task) {
                 target: el
             };
             showTaskContextMenu(fakeEvent, selectedTaskIds);
-        }, 600); // 600ms para long press
+        }, 600);
+    }, { passive: false });
+
+    el.addEventListener('touchmove', (e) => {
+        // Simple detección de scroll
+        const moveX = e.touches[0].clientX;
+        const moveY = e.touches[0].clientY;
+        if (Math.abs(moveX - startX) > 10 || Math.abs(moveY - startY) > 10) {
+            isScrolling = true;
+            clearTimeout(longPressTimer);
+            clearTimeout(singleTapTimer);
+        }
     }, { passive: false });
 
     el.addEventListener('touchend', (e) => {
         clearTimeout(longPressTimer);
-        // Si fue long press, ya se manejó.
-        // Si fue un tap normal, dejamos que el evento 'click' se dispare normalmente.
+
+        if (isScrolling || isLongPress) return;
+
+        // Es un TAP válido
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTapTime;
+
+        // Prevenir click nativo ghost
+        if (e.cancelable) e.preventDefault();
+
+        if (tapLength < 300 && tapLength > 0) {
+            // --- DOBLE TAP DETECTADO ---
+            // Cancelar el single tap pendiente del primer toque
+            clearTimeout(singleTapTimer);
+
+            // Acción: TOGGLE (Añadir/Quitar) - Multi-selección
+            if (navigator.vibrate) navigator.vibrate(30);
+
+            if (selectedTaskIds.has(task.id)) {
+                selectedTaskIds.delete(task.id);
+            } else {
+                selectedTaskIds.add(task.id);
+            }
+            updateSelectionVisuals();
+
+            lastTapTime = 0; // Reset para evitar triple tap confuso
+        } else {
+            // --- SINGLE TAP DETECTADO (Esperar posible segundo tap) ---
+            lastTapTime = currentTime;
+
+            singleTapTimer = setTimeout(() => {
+                // Si llegamos aquí, no hubo segundo tap
+                // Acción: SELECCIÓN EXCLUSIVA (Comportamiento normal)
+                selectedTaskIds.clear();
+                selectedTaskIds.add(task.id);
+                lastSelectedTaskId = task.id;
+                updateSelectionVisuals();
+            }, 350); // Ventana de tiempo para esperar el doble tap
+        }
     });
 
-    el.addEventListener('touchmove', (e) => {
-        // Si movemos el dedo, cancelamos el long press
-        clearTimeout(longPressTimer);
+    el.addEventListener('click', (e) => {
+        // En móvil/touch, prevenimos el click nativo porque ya manejamos la lógica en touchend
+        // En desktop (mouse), este evento sigue funcionando normal si no originó touch
+        if (e.detail === 0) return;
+
+        // Si detectamos que es un click de ratón real, lo dejamos pasar
+        // Pero si viene de touch emulation, deberíamos bloquearlo (o handleTaskSelection lo maneja)
+        // La prevención en touchend debería ser suficiente, pero por seguridad:
     });
 
     return el;
