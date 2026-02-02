@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Tareas</title>
+    <link rel="stylesheet" href="style-shared.css">
+    <link rel="stylesheet" href="style.css">
+    <link id="dark-mode-stylesheet" rel="stylesheet" href="style-dark.css" disabled>
+    <link rel="icon" href="image-removebg-preview (11) (1).png">
+    <meta name="google-site-verification" content="uQ0D2C2PkkNbkkRwoI_q8WUabb2rG409DZMmsliV0wU" />
+</head>
+
+<body>
+    <div id="authBox" class="container">
+        <h2>Iniciar sesión</h2>
+        <p class="anuncio">-Ingrese su correo y contraseña , en caso que no este registrado ,ponga su correo y su
+            contraseña que desea establecer </p>
+
+        <div class="form-group">
+            <input id="email" type="email" placeholder="Correo electrónico" required>
+        </div>
+        <div class="form-group">
+            <input id="password" type="password" placeholder="Contraseña" required>
+        </div>
+
+        <div class="form-group">
+            <a href="#" id="forgotPasswordLink" style="color: #2196F3; text-decoration: underline;">¿Olvidaste tu
+                contraseña?</a>
+        </div>
+
+        <button id="loginBtn">Iniciar Sesión</button>
+        <button id="registerBtn" class="secondary">Registrarse</button>
+
+        <p class="anuncio">-</p>
+    </div>
+
+    <div id="appBox" class="container" style="display:none">
+        <div class="header-container">
+            <h2>Gestor de Tareas</h2>
+            <div>
+                <button id="settingsBtn" class="settings-icon-btn" title="Configuración">⚙️</button>
+                <button id="logoutBtn" class="logout">Cerrar Sesión</button>
+            </div>
+        </div>
+
+        <div class="command-help">
+            <p><strong>Comandos disponibles:</strong></p>
+            <div class="command-example copy-group">
+                <span>- crea una tarea llamada [nombre] para mañana</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <div class="command-example copy-group">
+                <span>- crea una tarea llamada [nombre] para hoy a las 18:00</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <div class="command-example copy-group">
+                <span>- crea una tarea llamada [nombre] para el 19 de septiembre</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <div class="command-example copy-group">
+                <span>- nueva tarea [nombre] para el martes de esta semana</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <p><strong>Ejemplos:</strong></p>
+            <div class="command-example copy-group">
+                <span>crea una tarea llamada comprar pan para mañana</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <div class="command-example copy-group">
+                <span>crea una tarea llamada enviar correo para hoy a las 16:30</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+            <div class="command-example copy-group">
+                <span>crea una tarea llamada cita para el 19 de septiembre</span>
+                <button class="copy-btn" title="Copiar">📋</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="commandInput">Crear tarea con IA:</label>
+            <div class="command-input-group">
+                <input type="text" id="commandInput" class="command-input"
+                    placeholder="Ejemplo: comprar pan mañana a las 10am">
+                <button class="ai-button ai-task-button-main" id="mainAIButton">✨ Crear con IA</button>
+            </div>
+        </div>
+
+        <p class="opciones">Opción 2</p>
+        <div class="form-group">
+            <label for="taskName">Nombre de la tarea:</label>
+            <input type="text" id="taskName" required>
+        </div>
+
+        <div class="form-group">
+            <label for="taskDate">Fecha (opcional):</label>
+            <input type="date" id="taskDate">
+        </div>
+
+        <div class="form-group">
+            <label for="taskTime">Hora (opcional):</label>
+            <input type="time" id="taskTime">
+        </div>
+
+        <button class="add-task">Añadir Tarea</button>
+        <p class="vacio" style="padding-bottom: 1px;">
+
+        </p>
+        <p class="tittle">LISTA DE TAREAS</p>
+
+        <div class="completed-tasks-controls">
+            <button id="deleteCompletedBtn" class="danger-btn" disabled>Eliminar Todas Las Tareas Completadas</button>
+            <button id="settingsBtn1" class="settings-icon-btn" title="Configuración">⚙️</button>
+
+
+        </div>
+
+
+        <div class="task-list">
+            <h3 class="section-header">Tareas Completadas:</h3>
+            <div id="completedTasks"></div>
+
+            <h3 class="section-header">Tareas Pendientes:</h3>
+            <div id="pendingTasks">
+
+                <h4 class="section-subheader">- Con Fecha</h4>
+                <div id="datedTasks"></div>
+
+                <h4 class="section-subheader">- Sin Fecha</h4>
+                <div id="undefinedTasks"></div>
+
+            </div>
+        </div>
+
+        <p class="tittle">CALENDARIO DE TAREAS</p>
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prevMonth">&#10094;</button>
+                <h3 id="currentMonthYear"></h3>
+                <button id="nextMonth">&#10095;</button>
+            </div>
+            <div class="weekdays">
+                <div>Lun</div>
+                <div>Mar</div>
+                <div>Mié</div>
+                <div>Jue</div>
+                <div>Vie</div>
+                <div>Sáb</div>
+                <div>Dom</div>
+            </div>
+            <div id="calendar" class="calendar-grid"></div>
+        </div>
+    </div>
+
+    <div id="settingsPage" class="container settings-page-container" style="display:none;">
+        <div class="settings-header">
+            <h2>Configuración</h2>
+            <button id="closeSettingsBtn" class="secondary">Volver a Tareas</button>
+        </div>
+        <div class="settings-main-content">
+            <div class="settings-sidebar">
+                <a href="#" data-target="settingsGoogleCalendarSection" class="active">📅 Calendario Google</a>
+                <a href="#" data-target="settingsTaskCleanupSection">🗑️ Limpieza de Tareas</a>
+                <a href="#" data-target="settingsAppearanceSection">🎨 Apariencia</a>
+                <a href="#" data-target="settingsAISection">✨ Inteligencia Artificial</a>
+            </div>
+            <div class="settings-content">
+                <div id="settingsGoogleCalendarSection" class="settings-section">
+                    <h3>Integración Google Calendar</h3>
+                    <div class="google-calendar-section-content">
+                        <div class="calendar-controls">
+                            <button id="connectGoogleBtn" class="calendar-btn">
+                                📅 Conectar Google Calendar
+                            </button>
+                            <button id="disconnectGoogleBtn" class="calendar-btn disconnect-gcal-btn"
+                                style="margin-top: 10px; display: none;">
+                                🔌 Desconectar Google Calendar
+                            </button>
+                        </div>
+                        <p class="settings-description">Conecta tu cuenta de Google Calendar para sincronizar tareas y
+                            crear recordatorios. Si estás conectado, puedes optar por desconectar tu cuenta.</p>
+                    </div>
+                    <hr style="margin: 25px 0;">
+
+                    <h4>Mis Recordatorios Globales</h4>
+                    <div id="globalRemindersListContainer">
+                        <p id="noGlobalRemindersMsg" style="display: none;">No has creado recordatorios globales
+                            personalizados.</p>
+                        <ul id="globalRemindersList" class="styled-list">
+                        </ul>
+                    </div>
+                    <button id="addNewGlobalReminderBtn" class="calendar-btn" style="margin-top: 15px;" disabled>
+                        ➕ Crear Nuevo Recordatorio Global
+                    </button>
+                    <p class="settings-description">Crea recordatorios generales en tu Google Calendar para resúmenes de
+                        tareas o eventos importantes. Puedes editarlos o eliminarlos desde esta lista.</p>
+
+                    <hr style="margin: 25px 0;">
+
+                    <h4>Mis Recordatorios de Tareas</h4>
+                    <div id="individualTaskRemindersListContainer">
+                        <p id="noIndividualTaskRemindersMsg" style="display: none;">No hay recordatorios de tareas
+                            individuales o no estás conectado a Google Calendar.</p>
+                        <ul id="individualTaskRemindersList" class="styled-list">
+                        </ul>
+                    </div>
+                    <p class="settings-description">Estos son los recordatorios específicos para tus tareas que están en
+                        Google Calendar. Puedes editarlos o eliminarlos desde aquí.</p>
+
+                    <hr style="margin: 25px 0;">
+
+                    <h4>⚙️ Personalización de Eventos en Google Calendar</h4>
+                    <p class="settings-description">Configura cómo se crean los eventos de tus tareas en Google
+                        Calendar. Usa variables como <code>{taskName}</code>, <code>{dueDate}</code>,
+                        <code>{dueTime}</code>, <code>{priority}</code>.
+                    </p>
+
+                    <div class="form-group">
+                        <label for="gcalTitleTemplate">Plantilla de Título del Evento:</label>
+                        <input type="text" id="gcalTitleTemplate" placeholder="{taskName}" value="{taskName}">
+                        <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                            Ejemplo: "{taskName} - {priority}" → "Reunión - Alta"
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gcalDescriptionTemplate">Plantilla de Descripción:</label>
+                        <textarea id="gcalDescriptionTemplate" rows="3"
+                            placeholder="Tarea creada desde Task Manager&#10;Fecha límite: {dueDate}&#10;Prioridad: {priority}">Tarea creada desde Task Manager
+Fecha límite: {dueDate}
+Prioridad: {priority}</textarea>
+                        <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                            Variables disponibles: {taskName}, {dueDate}, {dueTime}, {priority}, {notes}
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gcalEventDuration">Duración del Evento:</label>
+                        <select id="gcalEventDuration">
+                            <option value="15">15 minutos</option>
+                            <option value="30">30 minutos</option>
+                            <option value="60" selected>1 hora</option>
+                            <option value="90">1.5 horas</option>
+                            <option value="120">2 horas</option>
+                            <option value="180">3 horas</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gcalEventColor">Color del Evento:</label>
+                        <select id="gcalEventColor">
+                            <option value="1">Lavanda</option>
+                            <option value="2">Salvia</option>
+                            <option value="3">Uva</option>
+                            <option value="4">Flamingo</option>
+                            <option value="5">Banana</option>
+                            <option value="6">Mandarina</option>
+                            <option value="7" selected>Pavo real</option>
+                            <option value="8">Grafito</option>
+                            <option value="9">Arándano</option>
+                            <option value="10">Albahaca</option>
+                            <option value="11">Tomate</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gcalReminderMinutes">Recordatorio antes del evento:</label>
+                        <select id="gcalReminderMinutes">
+                            <option value="0">Sin recordatorio</option>
+                            <option value="5">5 minutos antes</option>
+                            <option value="10">10 minutos antes</option>
+                            <option value="15" selected>15 minutos antes</option>
+                            <option value="30">30 minutos antes</option>
+                            <option value="60">1 hora antes</option>
+                            <option value="120">2 horas antes</option>
+                            <option value="1440">1 día antes</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gcalReminderMethod">Tipo de Recordatorio:</label>
+                        <select id="gcalReminderMethod">
+                            <option value="popup" selected>Popup (notificación)</option>
+                            <option value="email">Email</option>
+                        </select>
+                    </div>
+
+                    <button id="saveGcalCustomizationBtn" class="calendar-btn" style="margin-top: 10px;">
+                        💾 Guardar Configuración de Eventos
+                    </button>
+
+                    <div id="gcalCustomizationStatus"
+                        style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none; border: 1px solid rgba(0,0,0,0.1);">
+                        <strong>Estado:</strong> <span id="gcalCustomizationStatusText"></span>
+                    </div>
+
+                </div>
+
+                <div id="settingsTaskCleanupSection" class="settings-section" style="display:none;">
+                    <h3>Opciones de Limpieza de Tareas</h3>
+                    <div class="task-cleanup-section-content">
+                        <div class="form-group">
+                            <p for="autoDeleteFrequency">Borrar completadas automáticamente cada:</p>
+                            <select id="autoDeleteFrequency">
+                                <option value="never" selected>Nunca</option>
+                                <option value="daily">Día</option>
+                                <option value="weekly">Semana</option>
+                                <option value="monthly">Mes</option>
+                            </select>
+                        </div>
+                        <p class="settings-description">Configura la frecuencia con la que las tareas completadas se
+                            eliminarán automáticamente. La eliminación manual de todas las tareas completadas se
+                            encuentra en la página principal.</p>
+
+                        <hr style="margin: 25px 0;">
+
+                        <div class="form-group">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="confirmBeforeDelete" style="width: auto;">
+                                Confirmar antes de eliminar tareas
+                            </label>
+                        </div>
+                        <p class="settings-description">Si está activado, se mostrará un diálogo de confirmación antes
+                            de eliminar tareas desde el menú contextual.</p>
+                    </div>
+                </div>
+
+                <div id="settingsAppearanceSection" class="settings-section" style="display:none;">
+                    <h3>Apariencia y Tema</h3>
+                    <div class="appearance-section-content">
+                        <div class="form-group">
+                            <label style="margin-bottom: 10px;">Modo Oscuro</label>
+                            <button id="darkModeToggle">Activar Modo Oscuro</button>
+                        </div>
+                        <p class="settings-description">Cambia entre el tema claro y oscuro para tu comodidad visual.
+                        </p>
+
+                        <hr style="margin: 25px 0;">
+
+                        <div class="form-group">
+                            <label style="margin-bottom: 10px;">Efecto Liquid Glass (iOS 26)</label>
+                            <button id="glassmorphismToggle">Activar Liquid Glass</button>
+                        </div>
+                        <p class="settings-description">Activa el efecto de vidrio líquido oscuro estilo iOS 26 con
+                            transparencias y blur Premium.</p>
+
+                        <div class="form-group" id="backgroundSelectorGroup" style="margin-top: 15px;">
+                            <label for="bgThemeSelect">Fondo del Tema</label>
+                            <select id="bgThemeSelect">
+                                <option value="bg-dark-space">🌌 Espacio Oscuro (Default)</option>
+                                <option value="bg-sunset">🌅 Atardecer</option>
+                                <option value="bg-ocean">🌊 Océano Profundo</option>
+                                <option value="bg-forest">🌲 Bosque Nocturno</option>
+                                <option value="bg-aurora">💜 Aurora Púrpura</option>
+                                <option value="bg-midnight">🌑 Medianoche</option>
+                            </select>
+                        </div>
+                        <p class="settings-description">Selecciona el fondo de tu interfaz cuando Liquid Glass está
+                            activo.</p>
+
+                        <hr style="margin: 25px 0;">
+
+                        <div class="form-group">
+                            <label for="timeFormatSelect">Formato de Hora</label>
+                            <select id="timeFormatSelect">
+                                <option value="24h">24 horas (15:00)</option>
+                                <option value="12h">12 horas (3:00 PM)</option>
+                            </select>
+                        </div>
+                        <p class="settings-description">Selecciona tu formato de hora preferido para mostrar las tareas.
+                        </p>
+                    </div>
+                </div>
+
+                <div id="settingsAISection" class="settings-section" style="display:none;">
+                    <h3>Configuración de Inteligencia Artificial</h3>
+                    <div class="ai-section-content">
+                        <p class="settings-description">Configura la IA para crear tareas usando lenguaje natural.
+                            Ejemplo: "reunión mañana a las 3pm" y la IA creará automáticamente la tarea con la fecha y
+                            hora correctas.</p>
+
+                        <div class="form-group">
+                            <label for="aiProviderSelect">Proveedor de IA</label>
+                            <select id="aiProviderSelect">
+                                <option value="gemini">Google Gemini</option>
+                                <option value="chatgpt">ChatGPT (OpenAI)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="aiApiKey">API Key</label>
+                            <input type="password" id="aiApiKey" placeholder="Ingresa tu API key aquí">
+                            <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">
+                                La API key se guarda localmente en tu navegador y no se comparte.
+                            </small>
+                        </div>
+
+                        <button id="saveAIConfigBtn" class="ai-button">Guardar Configuración de IA</button>
+
+                        <div id="aiStatus"
+                            style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none; border: 1px solid rgba(0,0,0,0.1);">
+                            <strong>Estado:</strong> <span id="aiStatusText"></span>
+                        </div>
+
+                        <hr style="margin: 25px 0;">
+
+                        <h4>Cómo obtener tu API Key:</h4>
+                        <div class="settings-description">
+                            <p><strong>Para Google Gemini:</strong></p>
+                            <ol style="margin-left: 20px;">
+                                <li>Ve a <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                                        style="color: #2196F3;">Google AI Studio</a></li>
+                                <li>Inicia sesión con tu cuenta de Google</li>
+                                <li>Crea una nueva API key</li>
+                                <li>Copia la key y pégala arriba</li>
+                            </ol>
+
+                            <p style="margin-top: 15px;"><strong>Para ChatGPT (OpenAI):</strong></p>
+                            <ol style="margin-left: 20px;">
+                                <li>Ve a <a href="https://platform.openai.com/api-keys" target="_blank"
+                                        style="color: #2196F3;">OpenAI Platform</a></li>
+                                <li>Inicia sesión o crea una cuenta</li>
+                                <li>Crea una nueva API key</li>
+                                <li>Copia la key y pégala arriba</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3>Editar Tarea</h3>
+            <div class="form-group">
+                <label for="editTaskName">Nombre de la tarea:</label>
+                <input type="text" id="editTaskName" required>
+            </div>
+            <div class="form-group">
+                <label for="editDate">Fecha (opcional):</label>
+                <input type="date" id="editDate">
+            </div>
+            <div class="include-time-checkbox">
+                <input type="checkbox" id="includeTime">
+                <label for="includeTime">Incluir hora específica</label>
+            </div>
+            <div class="form-group" id="timeInputContainer" style="display: none;">
+                <label for="editTime">Hora:</label>
+                <input type="time" id="editTime">
+            </div>
+            <button class="save-task" type="button">Guardar</button>
+        </div>
+    </div>
+
+    <div class="modal" id="globalReminderModal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="globalReminderModalTitle">Crear Recordatorio Global</h3>
+            <input type="hidden" id="editingGlobalEventId" value="">
+
+            <label for="globalReminderSummary">Título del Recordatorio:</label>
+            <input type="text" id="globalReminderSummary" placeholder="Ej: Revisar Tareas Pendientes">
+
+            <label for="globalReminderDateTime">Fecha y hora:</label>
+            <input type="datetime-local" id="globalReminderDateTime">
+
+            <label for="globalReminderRepeat">Repetición:</label>
+            <select id="globalReminderRepeat">
+                <option value="none">Ninguna</option>
+                <option value="daily">Diaria</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly">Mensual</option>
+            </select>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button id="saveGlobalReminderBtn">Guardar Recordatorio</button>
+                <button type="button" class="secondary close-btn-modal">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="toast-notifications.js"></script>
+    <script src="ai-helper.js"></script>
+    <script src="gcal-customization.js"></script>
+    <script type="module" src="script.js"></script>
+    <script src="app-init.js"></script>
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p class="footer-links">
+                <a href="privacy_policy.html" target="_blank">Política de Privacidad</a> |
+                <a href="terms_of_service.html" target="_blank">Condiciones del Servicio</a>
+            </p>
+            <p class="copyright-text">&copy; <span id="currentYear"></span> Task Manager. Todos los derechos reservados.
+            </p>
+        </div>
+    </footer>
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+</body>
+
+</html>

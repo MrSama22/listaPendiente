@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bienvenido al Gestor de Tareas</title>
+    <link rel="stylesheet" href="style-shared.css">
+    <link rel="stylesheet" href="style.css">
+    <link id="dark-mode-stylesheet" rel="stylesheet" href="style-dark.css" disabled>
+    <link rel="icon" href="image-removebg-preview (11) (1).png">
+    <!-- Es importante que añadas tu etiqueta de verificación de Google aquí si no lo has hecho -->
+    <meta name="google-site-verification" content="uQ0D2C2PkkNbkkRwoI_q8WUabb2rG409DZMmsliV0wU" />
+    <style>
+        /* Estilos específicos para la página de bienvenida */
+        .landing-body {
+            background-color: #f4f7f6;
+            color: #333;
+            text-align: center;
+        }
+
+        .hero {
+            padding: 50px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .hero h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+        }
+
+        .hero p {
+            font-size: 1.3em;
+            margin-bottom: 30px;
+        }
+
+        .cta-button {
+            background-color: #FF9800;
+            color: white;
+            padding: 15px 35px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background-color 0.3s, transform 0.3s;
+            display: inline-block;
+        }
+
+        .cta-button:hover {
+            background-color: #F57C00;
+            transform: translateY(-3px);
+        }
+
+        .features {
+            padding: 40px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+        }
+
+        .feature-card {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .feature-card h3 {
+            color: #4CAF50;
+            border-bottom: none;
+            font-size: 1.5em;
+        }
+
+        .feature-card p {
+            font-size: 1em;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body class="landing-body">
+
+    <div class="container">
+        <div class="hero">
+            <h1>Gestor de Tareas Inteligente</h1>
+            <p>Tu asistente personal para organizar el día a día de forma sencilla y eficaz.</p>
+            <a href="login.html" class="cta-button">Empezar Ahora</a>
+        </div>
+
+        <div class="features">
+            <div class="feature-card">
+                <h3>📝 Creación Rápida</h3>
+                <p>Añade tareas usando lenguaje natural. Simplemente escribe lo que necesitas hacer y nosotros lo
+                    organizamos por ti.</p>
+            </div>
+            <div class="feature-card">
+                <h3>📅 Vista de Calendario</h3>
+                <p>Visualiza todas tus tareas en un calendario interactivo. Planifica tu semana o mes de un solo
+                    vistazo.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔔 Recordatorios Inteligentes</h3>
+                <p>Integra tus tareas con Google Calendar para recibir notificaciones y no olvidar nunca una fecha
+                    límite importante.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p class="footer-links">
+                <a href="privacy_policy.html" target="_blank">Política de Privacidad</a> |
+                <a href="terms_of_service.html" target="_blank">Condiciones del Servicio</a>
+            </p>
+            <p class="copyright-text">&copy; <span id="currentYear"></span> Task Manager. Todos los derechos reservados.
+            </p>
+        </div>
+    </footer>
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+</body>
+
+</html>

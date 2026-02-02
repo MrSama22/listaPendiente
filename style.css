@@ -1,0 +1,1382 @@
+/* Import shared styles for both light and dark themes */
+@import url('style-shared.css');
+
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+    -webkit-user-select: none;
+    /* para Safari */
+    -moz-user-select: none;
+    /* para Firefox */
+    -ms-user-select: none;
+    /* para Internet Explorer/Edge */
+    user-select: none;
+}
+
+.container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+input[type="text"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"],
+input[type="email"],
+input[type="password"],
+select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.task-list {
+    margin-top: 20px;
+}
+
+.task-item {
+    background-color: rgb(178, 204, 231, 0.5);
+    border-radius: 10px;
+    position: relative;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    margin-bottom: 3px;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+    cursor: pointer;
+}
+
+.task-item.selected {
+    background-color: #a9c8df;
+    border-radius: 10px;
+}
+
+/* --- INICIO DE MODIFICACIONES --- */
+.task-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    /* Mantenemos el centrado vertical */
+    display: flex;
+    background: rgb(0, 0, 0, 0);
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease-in;
+    /* Hacemos que el contenedor se desvanezca un poco más rápido */
+    z-index: 5;
+    padding: 1px;
+}
+
+.task-item.selected .task-actions {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(-50%);
+    /* El contenedor ya no se desliza */
+}
+
+/* Estado inicial de los botones: invisibles y desplazados a la derecha */
+.task-actions button {
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+
+    /* Estilos originales de los botones */
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    border-radius: 50%;
+    background: rgb(214, 165, 73);
+    color: #333;
+    border: 1px solid #eee;
+}
+
+/* Estado final de los botones cuando la tarea está seleccionada */
+.task-item.selected .task-actions button {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Retrasos escalonados para el efecto de despliegue */
+.task-item.selected .task-actions .calendar-reminder-btn {
+    transition-delay: 0s;
+}
+
+.task-item.selected .task-actions .delete-button {
+    transition-delay: 0.07s;
+}
+
+.task-item.selected .task-actions .toggle-status-button {
+    transition-delay: 0.14s;
+}
+
+.task-item.selected .task-actions .edit-button {
+    transition-delay: 0.21s;
+}
+
+.task-item.selected .task-actions .color-btn {
+    transition-delay: 0.28s;
+}
+
+/* Ajuste para el efecto hover */
+.task-actions button:hover {
+    transform: scale(1.1);
+}
+
+.task-item.selected .task-actions button:hover {
+    transform: scale(1.1) translateX(0);
+}
+
+/* --- FIN DE MODIFICACIONES --- */
+
+.task-actions .edit-button {
+    color: white;
+    background: #2196F3;
+}
+
+.task-actions .toggle-status-button {
+    color: white;
+    background: #4CAF50;
+}
+
+.task-actions .toggle-status-button.completed {
+    background: #FF9800;
+}
+
+.task-actions .delete-button {
+    color: white;
+    background: #f44336;
+}
+
+.completed {
+    background-color: #ceffd3;
+    border-radius: 10px;
+}
+
+.task-item.completed.selected {
+    background-color: #bce7c0;
+}
+
+.task-item.completed.selected .task-actions {
+    background-color: rgb(0, 0, 0, 0);
+
+}
+
+.task-info {
+    flex-grow: 1;
+    text-transform: capitalize;
+    padding-right: 50px;
+}
+
+h2 {
+    color: #333;
+    border-bottom: 2px solid #4CAF50;
+    padding-bottom: 10px;
+}
+
+h3 {
+    color: #333;
+    margin-top: 0;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
+}
+
+h4 {
+    /* General h4 style */
+    color: #555;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.command-input {
+    width: 100%;
+    padding: 15px;
+    margin: 20px 0;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.command-input:focus {
+    outline: none;
+    border-color: #45a049;
+    box-shadow: 0 0 5px rgba(69, 160, 73, 0.2);
+}
+
+.command-help {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-size: 14px;
+    border-left: 4px solid #4CAF50;
+}
+
+.command-example {
+    color: #666;
+    font-style: italic;
+    margin: 5px 0;
+    padding-left: 10px;
+}
+
+.section-header {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    color: #333;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    /* Allow modal to scroll if content is too tall */
+}
+
+.modal-content {
+    background-color: white;
+    margin: 10% auto;
+    /* Adjusted margin for potentially taller modals */
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    /* Keep a reasonable max-width */
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content label {
+    /* Ensure labels in modals are also styled if needed */
+    margin-top: 10px;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="datetime-local"],
+.modal-content select {
+    margin-bottom: 10px;
+    /* Spacing between inputs in modal */
+}
+
+.close-btn {
+    /* For general modal close buttons */
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+    /* Made it a bit bigger for easier clicking */
+    font-weight: bold;
+    /* Bolder */
+    line-height: 1;
+    color: #aaa;
+    /* Lighter color */
+}
+
+.close-btn:hover {
+    color: #333;
+    /* Darker on hover */
+}
+
+button.close-btn-modal {
+    /* Specific class for modal cancel buttons styled as secondary */
+    background-color: #6c757d;
+    /* Bootstrap secondary color */
+}
+
+button.close-btn-modal:hover {
+    background-color: #5a6268;
+}
+
+
+.date-time-inputs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.date-time-inputs input {
+    flex: 1;
+}
+
+.include-time-checkbox {
+    margin-bottom: 15px;
+}
+
+.opciones {
+    font-size: 25px;
+    font-weight: bold;
+    color: #333;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tittle {
+    font-weight: bold;
+    font-size: 30px;
+    color: #333;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+#authBox {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 30px;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-container>div {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+button.settings-icon-btn {
+    background: #607D8B;
+    color: white;
+    padding: 8px 10px;
+    font-size: 18px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button.settings-icon-btn:hover {
+    background: #546E7A;
+}
+
+button.secondary {
+    background: #2196F3;
+}
+
+button.secondary:hover {
+    background: #1976D2;
+}
+
+button.logout {
+    background: #FF9800;
+    padding: 8px 16px;
+}
+
+button.logout:hover {
+    background: #F57C00;
+}
+
+#authBox,
+#appBox,
+.settings-page-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+#email,
+#password {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.calendar-container {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #4CAF50;
+    color: white;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.calendar-header button {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: white;
+    padding: 5px 10px;
+}
+
+.calendar-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+    font-weight: normal;
+    border: none;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.weekdays div {
+    text-align: center;
+    padding: 10px 0;
+    color: #333;
+    border-right: 1px solid #e0e0e0;
+    box-sizing: border-box;
+}
+
+.weekdays div:last-child {
+    border-right: none;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: minmax(60px, auto);
+    border-top: 1px solid #e0e0e0;
+    border-left: 1px solid #e0e0e0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.calendar-day {
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 5px 3px 5px 3px;
+    min-height: 60px;
+    position: relative;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.calendar-day-number {
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-align: right;
+    color: #333;
+    padding: 2px 5px;
+    border-radius: 50%;
+    display: inline-block;
+    align-self: flex-end;
+}
+
+.calendar-day.other-month {
+    background-color: #f9f9f9;
+    color: #aaa;
+}
+
+.calendar-day.other-month .calendar-day-number {
+    color: #aaa;
+}
+
+.calendar-day.today {
+    background-color: #bcfdbe;
+}
+
+.calendar-day.today .calendar-day-number {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.calendar-task {
+    font-size: 12px;
+    margin-bottom: 5px;
+    padding: 5px;
+    border-radius: 4px;
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196F3;
+    white-space: normal;
+    word-break: break-word;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: #333;
+    display: block;
+}
+
+.calendar-task:hover {
+    background-color: #bbdefb;
+}
+
+.calendar-task-time {
+    font-size: 10px;
+    color: #666;
+    font-weight: bold;
+    display: inline;
+}
+
+.command-input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.add-task-button {
+    white-space: nowrap;
+}
+
+.highlight-task {
+    background-color: #ffeb3b !important;
+    border-left: 3px solid #ffc107 !important;
+    animation: pulse 1s;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.completed-tasks-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 10px 0;
+}
+
+button.danger-btn {
+    background-color: #f44336;
+    color: white;
+    width: 100%;
+    margin: 0 30px;
+}
+
+button.danger-btn:hover {
+    background-color: #d32f2f;
+}
+
+button.danger-btn:disabled {
+    background-color: #ff8a80;
+    color: #ffebee;
+    cursor: not-allowed;
+}
+
+
+
+
+.copy-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.copy-group:hover {
+    background-color: #f0f0f0;
+}
+
+.copy-group span {
+    flex-grow: 1;
+    color: #666;
+    font-style: italic;
+    padding-left: 10px;
+}
+
+.copy-btn {
+    background: #2196F3;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+    min-width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-btn:hover {
+    background: #1976D2;
+    transform: scale(1.05);
+}
+
+.section-subheader {
+    font-style: italic;
+    font-size: 15px;
+    margin-top: 20px;
+    padding: 10px;
+    background-color: rgb(248, 249, 250, 0);
+    border-radius: 4px;
+    margin-bottom: 7px;
+    color: #333;
+    border-top: 1px solid #c4c4c4;
+    border-radius: 2px;
+}
+
+.anuncio {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.anuncio:nth-child(odd) {
+    box-shadow: 0 -7px 4px rgba(0, 0, 0, 0.1);
+}
+
+#forgotPasswordLink {
+    font-size: 14px;
+    display: inline-block;
+    margin-top: -10px;
+    margin-bottom: 15px;
+}
+
+.calendar-reminder-btn {
+    background-color: #34a853;
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    margin-left: 5px;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.calendar-reminder-btn:hover:not(:disabled) {
+    background-color: rgb(233, 168, 48);
+}
+
+.calendar-reminder-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* SETTINGS PAGE STYLES */
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.settings-header h2 {
+    margin: 0;
+    border-bottom: none;
+}
+
+.settings-main-content {
+    display: flex;
+    gap: 20px;
+}
+
+.settings-sidebar {
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-right: 1px solid #ddd;
+}
+
+.settings-sidebar a {
+    display: block;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: #333;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 14px;
+}
+
+.settings-sidebar a:hover {
+    background-color: #e9ecef;
+    color: #007bff;
+}
+
+.settings-sidebar a.active {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.settings-content {
+    flex-grow: 1;
+    padding-left: 20px;
+}
+
+.settings-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 6px;
+}
+
+.settings-section h3 {
+    /* Titles within each setting section, e.g., "Integración Google Calendar" */
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+}
+
+.settings-section h4 {
+    /* Sub-titles, e.g., "Mis Recordatorios Globales" */
+    color: #337ab7;
+    /* A slightly different blue or a prominent color */
+    margin-top: 25px;
+    /* More space before a sub-section */
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #ccc;
+}
+
+
+.settings-description {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 15px;
+    line-height: 1.5;
+}
+
+#settingsGoogleCalendarSection .calendar-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: baseline;
+}
+
+/* ... (otros estilos) ... */
+
+button.disconnect-gcal-btn {
+    background-color: #f44336;
+    /* Rojo */
+    color: white;
+    /* hereda otros estilos de .calendar-btn o button */
+}
+
+button.disconnect-gcal-btn:hover {
+    background-color: #d32f2f;
+    /* Rojo más oscuro */
+}
+
+/* ... (resto de estilos) ... */
+#settingsGoogleCalendarSection .calendar-btn {
+    /* General .calendar-btn within this section */
+    width: auto;
+    min-width: 250px;
+}
+
+#settingsTaskCleanupSection .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+#settingsTaskCleanupSection #autoDeleteFrequency {
+    width: 100%;
+    max-width: 250px;
+}
+
+#settingsTaskCleanupSection p[for="autoDeleteFrequency"] {
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+/* Styles for the list of global reminders and individual task reminders */
+#globalRemindersListContainer,
+#individualTaskRemindersListContainer {
+    margin-top: 20px;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #eee;
+}
+
+ul.styled-list {
+    list-style: none;
+    padding: 0;
+}
+
+#globalRemindersList li,
+#individualTaskRemindersList li {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+#globalRemindersList .reminder-info,
+#individualTaskRemindersList .reminder-info {
+    flex-grow: 1;
+    align-self: self-start;
+    /* Ensure content aligns to top if wrapping */
+}
+
+#globalRemindersList .reminder-summary,
+/* Applies to both global and individual task reminder list items */
+#individualTaskRemindersList .reminder-summary {
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 4px;
+}
+
+#globalRemindersList .reminder-time,
+#globalRemindersList .reminder-recurrence,
+#individualTaskRemindersList .reminder-time,
+#individualTaskRemindersList .reminder-recurrence,
+#individualTaskRemindersList .task-due-date-info {
+    /* Specific to individual task reminders */
+    font-size: 0.85em;
+    color: #555;
+    display: block;
+    margin-bottom: 2px;
+    /* Add small margin between details */
+}
+
+#globalRemindersList .reminder-actions,
+#individualTaskRemindersList .reminder-actions {
+    display: flex;
+    /* Ensure buttons are in a row */
+    gap: 8px;
+    /* Add space between buttons */
+    align-items: center;
+    /* Align buttons vertically */
+}
+
+#globalRemindersList .reminder-actions button,
+#individualTaskRemindersList .reminder-actions button {
+    padding: 5px 10px;
+    font-size: 0.85em;
+    /* margin-left: 8px; remove individual margin, use gap on parent */
+}
+
+#globalRemindersList .edit-global-reminder-btn,
+#individualTaskRemindersList .edit-individual-task-reminder-btn {
+    background-color: #ffc107;
+    /* Yellow for edit */
+    color: #333;
+}
+
+#globalRemindersList .edit-global-reminder-btn:hover,
+#individualTaskRemindersList .edit-individual-task-reminder-btn:hover {
+    background-color: #e0a800;
+}
+
+#globalRemindersList .delete-global-reminder-btn,
+#individualTaskRemindersList .delete-individual-task-reminder-btn {
+    background-color: #dc3545;
+    /* Red for delete */
+    color: white;
+}
+
+#globalRemindersList .delete-global-reminder-btn:hover,
+#individualTaskRemindersList .delete-individual-task-reminder-btn:hover {
+    background-color: #c82333;
+}
+
+
+/* Ensure modal inputs for global reminder have proper spacing */
+#globalReminderModal label {
+    margin-top: 12px;
+    margin-bottom: 3px;
+}
+
+#globalReminderModal input[type="text"],
+#globalReminderModal input[type="datetime-local"],
+#globalReminderModal select {
+    margin-bottom: 12px;
+}
+
+/* ===== ESTILOS DEL FOOTER ===== */
+.app-footer {
+    text-align: center;
+    padding: 25px 20px;
+    /* Más padding vertical */
+    margin-top: 40px;
+    /* Espacio respecto al contenido superior */
+    background-color: #f8f9fa;
+    /* Un color de fondo suave, similar al de .command-help o .section-header */
+    border-top: 1px solid #e0e0e0;
+    /* Un borde superior sutil */
+    width: 100%;
+    /* Asegura que ocupe todo el ancho disponible */
+    box-sizing: border-box;
+    /* Para que el padding y borde no aumenten el ancho total */
+    clear: both;
+    /* En caso de que haya elementos flotantes antes */
+}
+
+.footer-content {
+    max-width: 800px;
+    /* Para que coincida con el max-width del body y .container */
+    margin: 0 auto;
+    /* Centrar el contenido del footer */
+}
+
+.app-footer .footer-links {
+    margin-bottom: 10px;
+}
+
+.app-footer .footer-links a {
+    color: #2196F3;
+    /* Azul de tus botones secundarios, bueno para enlaces */
+    text-decoration: none;
+    margin: 0 8px;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.app-footer .footer-links a:hover {
+    color: #1976D2;
+    /* Un azul más oscuro al pasar el mouse */
+    text-decoration: underline;
+}
+
+.app-footer .copyright-text {
+    color: #6c757d;
+    /* Un gris suave para el texto de copyright */
+    font-size: 0.85em;
+    margin: 0;
+}
+
+/* Opcional: Estilos para el logo en el footer si decides usarlo */
+.app-footer .footer-logo {
+    max-height: 30px;
+    /* Ajusta el tamaño según necesites */
+    margin-top: 10px;
+    opacity: 0.7;
+}
+
+/* Ajuste para que el footer no se superponga con el contenido principal si el body tiene max-width */
+/* Esto ya debería estar cubierto por el max-width en .footer-content y el box-sizing en .app-footer */
+/* pero es bueno tenerlo en cuenta. El body ya tiene max-width: 800px y margin: 0 auto. */
+/* --- AÑADE ESTO PARA LA ANIMACIÓN DE COMPLETADO --- */
+
+/* Base para la animación de tachado */
+.task-info {
+    position: relative;
+    transition: color 0.4s ease;
+}
+
+/* La línea de tachado (inicialmente invisible) */
+.task-info::after {
+    /*content: '';*/
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: #333;
+    transform: scaleX(0);
+    /* Empieza con ancho 0 */
+    transform-origin: left;
+    /* Crecerá de izquierda a derecha */
+    transition: transform 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+/* Cuando la tarea está completada, la línea se expande */
+.task-item.completed .task-info::after {
+    transform: scaleX(1);
+}
+
+/* Animación cuando se completa una tarea */
+@keyframes completeAnimation {
+    from {
+        transform: scale(1.05);
+        background-color: #f0f0f0;
+        /* Color neutral de inicio */
+    }
+
+    to {
+        transform: scale(1);
+        background-color: #ceffd3;
+        /* Color final de tarea completada */
+    }
+}
+
+/* Animación cuando se des-completa una tarea */
+@keyframes uncompleteAnimation {
+    from {
+        background-color: #ceffd3;
+    }
+
+    to {
+        background-color: rgb(178, 204, 231, 0.5);
+        /* Color de tarea pendiente */
+    }
+}
+
+/* Clases que activan las animaciones */
+.task-item.just-completed {
+    animation: completeAnimation 0.5s ease-out forwards;
+}
+
+.task-item.just-uncompleted {
+    animation: uncompleteAnimation 0.5s ease-out forwards;
+}
+
+/* --- AÑADE ESTO PARA LA ANIMACIÓN DE NUEVA TAREA --- */
+
+/* Animación cuando se añade una tarea */
+@keyframes addTaskAnimation {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+        background-color: #a8e6cf;
+        /* Un verde menta suave para el efecto "flash" */
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        /* El color de fondo final será el normal de la tarea */
+    }
+}
+
+/* Clase que activa la animación de añadir tarea */
+.task-item.just-added {
+    animation: addTaskAnimation 0.6s ease-out forwards;
+}
+
+@media (max-width: 800px) {
+    .header-container {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .auth-buttons {
+        flex-direction: column;
+    }
+
+    .calendar-container {
+        overflow-x: auto;
+    }
+
+    .calendar-header,
+    .weekdays,
+    .calendar-grid {
+        min-width: 600px;
+    }
+
+    .calendar-header {
+        position: sticky;
+        left: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background-color: #4CAF50;
+        color: white;
+        box-sizing: border-box;
+    }
+
+    .calendar-header h3 {
+        flex: 1 1 auto;
+        text-align: center;
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .calendar-header button {
+        flex: 0 0 auto;
+    }
+
+    .weekdays {
+        position: sticky;
+        left: 0;
+    }
+
+    .calendar-day {
+        min-width: 80px;
+        min-height: 50px;
+        padding: 2px;
+    }
+
+    .calendar-task {
+        font-size: 10px;
+        padding: 3px;
+    }
+
+    .command-input-group {
+        flex-direction: column;
+    }
+
+    .task-actions {
+        /* Posicionamiento (esto ya lo tenías bien) */
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        display: flex;
+        z-index: 5;
+
+        /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
+
+        /* 1. Fondo semitransparente (usamos un blanco sutil) */
+        background: rgba(255, 255, 255, 0.3);
+
+        /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        /* Para Safari */
+
+        /* 3. Borde sutil y redondeado */
+        border-radius: 50px;
+        /* Bordes bien redondeados para un look moderno */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        /* 4. Sombra para dar profundidad */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-item.completed.selected .task-actions {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        display: flex;
+        z-index: 5;
+
+        /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
+
+        /* 1. Fondo semitransparente (usamos un blanco sutil) */
+        background: rgba(255, 255, 255, 0.3);
+
+        /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        /* Para Safari */
+
+        /* 3. Borde sutil y redondeado */
+        border-radius: 50px;
+        /* Bordes bien redondeados para un look moderno */
+        border: 1px solid rgba(255, 255, 255, 0.2);
+
+        /* 4. Sombra para dar profundidad */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .task-actions button {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+        margin: 0 2px;
+    }
+
+    .copy-btn {
+        margin-left: 8px;
+    }
+
+    .completed-tasks-controls {
+        justify-content: center;
+    }
+
+    .settings-main-content {
+        flex-direction: column;
+    }
+
+    .settings-sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+    }
+
+    .settings-sidebar a {
+        text-align: center;
+    }
+
+    .settings-content {
+        width: 100%;
+        padding-left: 0;
+    }
+
+    .settings-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .settings-header h2 {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    #closeSettingsBtn {
+        width: 100%;
+    }
+
+    #globalRemindersList li,
+    #individualTaskRemindersList li {
+        /* Apply to both lists */
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    #globalRemindersList .reminder-actions,
+    #individualTaskRemindersList .reminder-actions {
+        /* Apply to both lists */
+        margin-top: 8px;
+        align-self: flex-start;
+    }
+
+    .settings-main-content .settings-sidebar {
+        align-items: center;
+    }
+
+    .settings-main-content {
+        align-items: center;
+
+    }
+
+    .settings-sidebar {
+        width: 90%;
+        box-shadow: 0px 10px 15px gray;
+
+    }
+
+    #settingsGoogleCalendarSection .calendar-controls {
+        align-items: stretch;
+    }
+}
+
+/* ---- Touch Drag Styles for Mobile ---- */
+.touch-dragging-source {
+    opacity: 0.4;
+}
+
+.calendar-day.touch-drag-over {
+    background-color: rgba(76, 175, 80, 0.3) !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+    transition: all 0.15s ease;
+}
+
+.touch-dragging-clone {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+/*.task-item.completed .task-info{
+    /*text-decoration :line-through;}*/
