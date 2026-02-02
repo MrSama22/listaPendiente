@@ -2408,6 +2408,8 @@ function renderCalendar() {
     for (let i = 1; i <= nextMDs; i++) calEl.appendChild(createCalendarDay(i, true));
     scrollToTodayOnMobile();
 }
+// Expose renderCalendar globally for categories.js
+window.renderCalendar = renderCalendar;
 function createCalendarDay(dayN, isOtherM, isTodayF = false) {
     const el = document.createElement('div');
     el.className = `calendar-day${isOtherM ? ' other-month' : ''}${isTodayF ? ' today' : ''}`;
