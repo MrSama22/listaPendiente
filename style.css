@@ -1039,7 +1039,7 @@ ul.styled-list {
     /* Más padding vertical */
     margin-top: 40px;
     /* Espacio respecto al contenido superior */
-    background-color: #f8f9fa;
+    background-color: rgba(30, 30, 30, 0.063);
     /* Un color de fondo suave, similar al de .command-help o .section-header */
     border-top: 1px solid #e0e0e0;
     /* Un borde superior sutil */
