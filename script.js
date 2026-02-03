@@ -2506,42 +2506,91 @@ function renderCalendar() {
     const calEl = document.getElementById('calendar'), monthYrEl = document.getElementById('currentMonthYear');
     if (!calEl || !monthYrEl) return;
 
-    // --- DYNAMIC FILTER INJECTION ---
-    let filterContainer = document.getElementById('calendarFilterContainer');
-    if (!filterContainer && monthYrEl.parentNode) {
-        filterContainer = document.createElement('div');
-        filterContainer.id = 'calendarFilterContainer';
-        filterContainer.style.cssText = "display: inline-block; margin-left: 15px; vertical-align: middle;";
+    // --- CUSTOM FILTER ▼ (Arrow UI) ---
+    // Remove old standard select if exists
+    const oldFilter = document.getElementById('calendarFilterContainer');
+    if (oldFilter) oldFilter.remove();
 
-        const select = document.createElement('select');
-        select.id = 'calendarCategoryFilter';
-        select.style.cssText = "padding: 5px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: inherit;";
-        select.innerHTML = '<option value="all">Todas las Categorías</option>';
+    // Check if Custom Filter exists, if not create
+    let customFilterWrapper = document.getElementById('calCustomFilterWrapper');
+    if (!customFilterWrapper && monthYrEl.parentNode) {
+        customFilterWrapper = document.createElement('div');
+        customFilterWrapper.id = 'calCustomFilterWrapper';
+        customFilterWrapper.style.cssText = "position:relative; display:inline-block; vertical-align:middle; margin-left:8px;";
 
-        // Populate Categories
-        if (window.categoryManager && window.categoryManager.categories) {
-            window.categoryManager.categories.forEach(c => {
-                select.innerHTML += `<option value="${c.id}">${c.emoji} ${c.name}</option>`;
-            });
-        }
+        const arrowBtn = document.createElement('span');
+        arrowBtn.innerHTML = '▼'; // Elegant arrow
+        arrowBtn.style.cssText = "cursor:pointer; font-size:0.8em; opacity:0.7; color:white; transition:all 0.2s; padding:5px 8px; border-radius:4px;";
+        arrowBtn.onmouseover = () => { arrowBtn.style.opacity = '1'; arrowBtn.style.background = 'rgba(255,255,255,0.1)'; };
+        arrowBtn.onmouseout = () => { arrowBtn.style.opacity = '0.7'; arrowBtn.style.background = 'transparent'; };
 
-        select.addEventListener('change', () => renderCalendar());
+        const dropdown = document.createElement('div');
+        dropdown.id = 'calCustomFilterDropdown';
+        dropdown.style.cssText = "display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);";
 
-        filterContainer.appendChild(select);
-        monthYrEl.parentNode.appendChild(filterContainer);
-        // Or insertAfter monthYrEl
-        monthYrEl.parentNode.insertBefore(filterContainer, monthYrEl.nextSibling);
-    }
-    // Update options if categories changed (simplified)
-    const filterSelect = document.getElementById('calendarCategoryFilter');
-    if (filterSelect && window.categoryManager && window.categoryManager.categories.length > (filterSelect.options.length - 1)) {
-        // Re-populate if count mismatch (simple sync)
-        const currentVal = filterSelect.value;
-        filterSelect.innerHTML = '<option value="all">Todas las Categorías</option>';
-        window.categoryManager.categories.forEach(c => {
-            filterSelect.innerHTML += `<option value="${c.id}">${c.emoji} ${c.name}</option>`;
+        const populateDropdown = () => {
+            dropdown.innerHTML = '';
+
+            // "All" Option
+            const addOp = (id, label, icon) => {
+                const op = document.createElement('div');
+                op.innerHTML = `<span style="width:20px; text-align:center;">${icon}</span> ${label}`;
+                op.style.cssText = "padding:8px 12px; cursor:pointer; border-radius:8px; color:white; font-size:0.9em; display:flex; align-items:center; gap:8px; transition:background 0.2s;";
+                op.onmouseover = () => op.style.background = 'rgba(255,255,255,0.1)';
+                op.onmouseout = () => op.style.background = 'transparent';
+                op.onclick = () => {
+                    window.currentCalendarCategoryFilter = id;
+                    renderCalendar();
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(op);
+            };
+
+            addOp('all', 'Todas las Categorías', '📅');
+
+            if (window.categoryManager && window.categoryManager.categories) {
+                window.categoryManager.categories.forEach(c => {
+                    addOp(c.id, c.name, c.emoji || '📝');
+                });
+            }
+        };
+
+        arrowBtn.onclick = (e) => {
+            e.stopPropagation();
+            const isVis = dropdown.style.display === 'block';
+            if (!isVis) populateDropdown();
+            dropdown.style.display = isVis ? 'none' : 'block';
+        };
+
+        // Close on global click
+        document.addEventListener('click', (e) => {
+            if (!customFilterWrapper.contains(e.target)) dropdown.style.display = 'none';
         });
-        filterSelect.value = currentVal;
+
+        customFilterWrapper.appendChild(arrowBtn);
+        customFilterWrapper.appendChild(dropdown);
+
+        monthYrEl.parentNode.insertBefore(customFilterWrapper, monthYrEl.nextSibling);
+    }
+
+    // --- WEEKDAY HEADER CLICKS ---
+    const weekdayCells = document.querySelectorAll('.calendar-container .weekdays div');
+    if (weekdayCells.length > 0) {
+        const fullNames = {
+            "Lun": "Lunes", "Mar": "Martes", "Mié": "Miércoles", "Jue": "Jueves", "Vie": "Viernes", "Sáb": "Sábado", "Dom": "Domingo",
+            "Mon": "Lunes", "Tue": "Martes", "Wed": "Miércoles", "Thu": "Jueves", "Fri": "Viernes", "Sat": "Sábado", "Sun": "Domingo"
+        };
+
+        weekdayCells.forEach(cell => {
+            cell.style.cursor = 'pointer';
+            cell.title = "Ver tareas de este día (todo el mes)";
+            // Use onclick assignment to avoid duplicates
+            cell.onclick = () => {
+                const txt = cell.textContent.trim();
+                const name = fullNames[txt] || txt;
+                openCalendarDetailCard(name, false, true); // (dateStr, isMonth, isWeekday)
+            };
+        });
     }
 
     const y = currentCalendarDate.getFullYear(), m = currentCalendarDate.getMonth();
@@ -2579,9 +2628,8 @@ function addTasksToCalendarDay(dayEl, date) {
     dayEl.addEventListener('dragleave', handleDragLeave);
 
     // --- CALENDAR CATEGORY FILTER LOGIC ---
-    let categoryFilterId = null;
-    const filterEl = document.getElementById('calendarCategoryFilter');
-    if (filterEl) categoryFilterId = filterEl.value;
+    // Use global state from the Arrow Filter
+    let categoryFilterId = window.currentCalendarCategoryFilter || 'all';
 
     const dailyTasks = tasks.filter(t => {
         const parsedDate = parseTaskDate(t.dueDate);
@@ -2968,7 +3016,11 @@ window.renderCalendarWithTouch = function () {
 
 // ---- CALENDAR DETAIL CARDS (PREMIUM FEATURE) ----
 
-function openCalendarDetailCard(dateStr, isMonthView = false) {
+// ---- CALENDAR DETAIL CARDS (Premium V4: Quick Add, Weekdays, Filters) ----
+
+let currentCardFilterCategory = null;
+
+function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = false) {
     const modal = document.getElementById('calendarDetailsModal');
     const titleEl = document.getElementById('calendarDetailsTitle');
     const subtitleEl = document.getElementById('calendarDetailsSubtitle');
@@ -2985,9 +3037,86 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
     let displaySubtitle = '';
     let targetDateObj = null;
 
+    // --- QUICK ADD FORM LOGIC (Inline) ---
+    const showQuickAddForm = () => {
+        const quickAddId = 'quickAddFormContainer';
+        if (document.getElementById(quickAddId)) return;
+
+        const formDiv = document.createElement('div');
+        formDiv.id = quickAddId;
+        formDiv.className = 'detail-card-item quick-add-form';
+        formDiv.style.cssText = "background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); padding: 12px; display:flex; flex-direction:column; gap:8px; margin-bottom:15px;";
+
+        // Pre-fill date
+        let defaultDate = '';
+        if (targetDateObj) {
+            const yyyy = targetDateObj.getFullYear();
+            const mm = String(targetDateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(targetDateObj.getDate()).padStart(2, '0');
+            defaultDate = `${yyyy}-${mm}-${dd}`;
+        }
+
+        let catOptions = '<option value="">Sin Categoría</option>';
+        if (window.categoryManager && window.categoryManager.categories) {
+            window.categoryManager.categories.forEach(c => {
+                catOptions += `<option value="${c.id}">${c.emoji} ${c.name}</option>`;
+            });
+        }
+
+        formDiv.innerHTML = `
+            <input type="text" id="qaName" placeholder="✨ Nueva tarea..." style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.2); color:white; padding:8px 0; font-size:1.1em; outline:none; width:100%;">
+            <div style="display:flex; gap:10px; margin-top:5px;">
+                <input type="time" id="qaTime" style="background:rgba(0,0,0,0.3); border:none; color:white; padding:6px; border-radius:6px; outline:none;">
+                <select id="qaCat" style="background:rgba(0,0,0,0.3); border:none; color:white; border-radius:6px; flex:1; padding:6px; outline:none;">${catOptions}</select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                <button id="qaCancel" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:6px 12px; border-radius:6px; cursor:pointer;">Cancelar</button>
+                <button id="qaSave" style="background:var(--primary-color); border:none; color:white; padding:6px 15px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.2);">Guardar</button>
+            </div>
+         `;
+
+        bodyEl.insertBefore(formDiv, bodyEl.firstChild);
+
+        formDiv.querySelector('#qaCancel').onclick = () => formDiv.remove();
+        formDiv.querySelector('#qaSave').onclick = async () => {
+            const name = formDiv.querySelector('#qaName').value;
+            if (!name) return alert('Escribe un nombre para la tarea');
+
+            const time = formDiv.querySelector('#qaTime').value;
+            const catId = formDiv.querySelector('#qaCat').value;
+
+            const newTask = {
+                name: name,
+                dueDate: defaultDate,
+                dueTime: time || '',
+                categoryId: catId || '',
+                completed: false,
+                createdAt: firebase.firestore.Timestamp.now()
+            };
+
+            try {
+                if (currentUserId) {
+                    await db.collection("users").doc(currentUserId).collection("tasks").add(newTask);
+                    // No need to refresh heavily, standard listener triggers
+                    // But we want to rebuild the list here instantly?
+                    // Let's just remove form and the listener update will handle it?
+                    // Actually listener update re-calls renderCalendar, but maybe not openCalendarDetailCard
+                    // We must manually refresh:
+                    formDiv.remove();
+                    // Wait 500ms for Firestore local event or just re-render immediately? 
+                    // To be safe and show it "appeared", we can re-call.
+                    setTimeout(() => openCalendarDetailCard(dateStr, isMonthView, isWeekdayView), 300);
+                }
+            } catch (e) { console.error(e); alert('Error al crear: ' + e.message); }
+        };
+
+        formDiv.querySelector('#qaName').focus();
+    };
+
+
     if (isMonthView) {
         // SUMMARY OF MONTH
-        const [monthName, year] = dateStr.split(' '); // "Enero 2026"
+        const [monthName, year] = dateStr.split(' ');
         displayTitle = monthName;
         displaySubtitle = `Resumen de ${year}`;
 
@@ -2996,42 +3125,35 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
         filteredTasks = tasks.filter(t => {
             const d = parseTaskDate(t.dueDate);
             if (!d) return false;
-            // Filter by Month & Year
             return d.getMonth() === mIndex && d.getFullYear() == year;
         });
 
-        // "Create Global Reminders" Action for Month View
-        actionBtn.textContent = "🔔 Crear Recordatorios Globales (Todos)";
-        actionBtn.onclick = async () => {
-            if (!confirm(`¿Crear recordatorios en Google Calendar para TODAS las ${filteredTasks.length} tareas de este mes?`)) return;
+        actionBtn.textContent = "🔔 Crear Recordatorios Globales";
+        actionBtn.onclick = () => alert("Función en desarrollo.");
+        actionBtn.style.display = 'block';
 
-            let createdCount = 0;
-            for (const t of filteredTasks) {
-                if (t.completed) continue;
-                // Skip if already has one? or update? Let's try to create if missing.
-                if (t.googleCalendarEventId) continue;
+    } else if (isWeekdayView) {
+        // WEEKDAY VIEW
+        displayTitle = dateStr; // e.g., "Lunes"
+        displaySubtitle = "Todas las tareas de este día (Mes Actual)";
+        const currentM = currentCalendarDate.getMonth();
+        const currentY = currentCalendarDate.getFullYear();
 
-                // Reuse logic from confirmAndSaveIndividualTaskReminder but we can't call it directly easily without modal.
-                // We will create a simplified helper or just trigger the modal for each? No, that's annoying.
-                // Let's just notify user to do it individually for safety or use a batch helper if we had one.
-                // User asked for "hacer recordatorio global de todas".
-                // Detailed implementation would require a batch function.
-                // For now, let's open the first one or just alert.
-                alert("Función de creación masiva en desarrollo. Por favor configure cada uno individualmente por ahora para evitar spam en su calendario.");
-                // A proper implementation requires avoiding rate limits and setting defaults.
-                // Let's disable this auto-magic for now and change button to "Ver Lista Completa" which is safer.
-            }
-        };
-        // Revert to safer action for now based on complexity risk
-        actionBtn.textContent = "Cerrar Resumen";
-        actionBtn.onclick = () => modal.style.display = 'none';
+        const weekMap = { "Domingo": 0, "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6 };
+        const targetDay = weekMap[dateStr];
+
+        filteredTasks = tasks.filter(t => {
+            const d = parseTaskDate(t.dueDate);
+            if (!d) return false;
+            return d.getMonth() === currentM && d.getFullYear() === currentY && d.getDay() === targetDay;
+        });
+
+        actionBtn.style.display = 'none';
 
     } else {
         // DAY DETAILS
-        // Fix bug: Ensure we compare LOCAL dates correctly.
-        // dateStr is "YYYY-MM-DD" from the cell dataset.
         const [y, m, d] = dateStr.split('-').map(Number);
-        targetDateObj = new Date(y, m - 1, d); // Local midnight
+        targetDateObj = new Date(y, m - 1, d);
 
         const options = { weekday: 'long', day: 'numeric', month: 'long' };
         displayTitle = targetDateObj.toLocaleDateString('es-ES', options);
@@ -3048,82 +3170,79 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
         const pendingCount = filteredTasks.filter(t => !t.completed).length;
         displaySubtitle = pendingCount === 0 ? '¡Día libre! 🎉' : `${pendingCount} tareas pendientes`;
 
+        actionBtn.style.display = 'block';
         actionBtn.textContent = "Añadir Nueva Tarea Aquí";
-        actionBtn.onclick = () => {
-            modal.style.display = 'none';
-            // Open main add task modal
-            const addTaskToggle = document.querySelector('.add-task button');
-            if (addTaskToggle) addTaskToggle.click();
-
-            // Pre-fill Logic
-            setTimeout(() => { // Wait for modal animation
-                const dateInput = document.getElementById('taskDate');
-                if (dateInput && dateStr) {
-                    dateInput.value = dateStr; // YYYY-MM-DD matches input format
-                }
-            }, 100);
-        };
+        actionBtn.onclick = showQuickAddForm;
     }
 
     titleEl.textContent = displayTitle;
     subtitleEl.textContent = displaySubtitle;
 
+    // --- IN-CARD FILTER UI ---
+    if (currentCardFilterCategory) {
+        filteredTasks = filteredTasks.filter(t => t.categoryId === currentCardFilterCategory);
+
+        const filterContainer = document.createElement('div');
+        filterContainer.style.cssText = "margin-bottom:15px; display:flex; align-items:center;";
+
+        const catObj = window.categoryManager?.categories.find(c => c.id === currentCardFilterCategory);
+        const catName = catObj ? `${catObj.emoji} ${catObj.name}` : 'Categoría';
+
+        filterContainer.innerHTML = `
+            <div style="background:rgba(var(--primary-rgb), 0.2); border:1px solid var(--primary-color); padding:5px 12px; border-radius:20px; font-size:0.9em; display:flex; align-items:center; gap:8px;">
+                <span>Filtrando por: <strong>${catName}</strong></span>
+                <button id="clearInCardFilter" style="background:none; border:none; color:white; cursor:pointer; font-size:1.1em; display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.1);">✕</button>
+            </div>
+        `;
+        bodyEl.appendChild(filterContainer);
+
+        setTimeout(() => {
+            document.getElementById('clearInCardFilter').onclick = () => {
+                currentCardFilterCategory = null;
+                openCalendarDetailCard(dateStr, isMonthView, isWeekdayView);
+            };
+        }, 0);
+    }
+
     if (filteredTasks.length === 0) {
-        bodyEl.innerHTML = `
-            <div class="empty-state-card">
-                <div style="font-size: 3em; margin-bottom: 10px;">🍃</div>
-                <div>No hay tareas para este período</div>
-            </div>`;
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'empty-state-card';
+        emptyMsg.innerHTML = `<div style="font-size: 3em; margin-bottom: 10px;">🍃</div><div>No hay tareas</div>`;
+        bodyEl.appendChild(emptyMsg);
     } else {
-        // ---- SORTING LOGIC (User Request) ----
-        // 1. Soonest to expire (Time Left)
-        // 2. Has Category (Priority)
-        // 3. Last Created
+        // Render Tasks
         filteredTasks.sort((a, b) => {
             if (a.completed !== b.completed) return a.completed ? 1 : -1;
-
             const dateA = parseTaskDate(a.dueDate);
             const dateB = parseTaskDate(b.dueDate);
-
-            // Time difference (Ascending - sooner first)
-            if (dateA && dateB) {
-                const diff = dateA - dateB;
-                if (diff !== 0) return diff;
-            }
-
-            // If times are equal (or both no-time), prioritize Category
-            const hasCatA = !!a.categoryId;
-            const hasCatB = !!b.categoryId;
-            if (hasCatA !== hasCatB) return hasCatB ? 1 : -1; // Has category comes first (wait, usually explicit categories imply organization) -> yes, prioritize categorized.
-
-            // Finally Creation Date
+            if (dateA && dateB) { const diff = dateA - dateB; if (diff !== 0) return diff; }
+            const hasCatA = !!a.categoryId; const hasCatB = !!b.categoryId;
+            if (hasCatA !== hasCatB) return hasCatB ? 1 : -1;
             return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
         });
 
         filteredTasks.forEach(t => {
             const item = document.createElement('div');
             item.className = `detail-card-item ${t.completed ? 'completed' : ''}`;
-            item.setAttribute('data-id', t.id); // For context menu
+            item.setAttribute('data-id', t.id);
 
-            // Interaction: Context Menu & Selection
             item.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                handleTaskSelection(e, t.id); // Select it
-                showTaskContextMenu(e, t.id); // Show global menu
+                handleTaskSelection(e, t.id);
+                showTaskContextMenu(e, t.id);
             });
 
             item.addEventListener('click', (e) => {
-                // Multi-select support
                 if (e.ctrlKey || e.shiftKey) {
                     handleTaskSelection(e, t.id);
                     item.classList.toggle('selected', selectedTaskIds.has(t.id));
                 }
             });
 
-            // Category Info
             let catColor = 'var(--primary-color)';
             let catEmoji = '📝';
             let catName = 'Sin categoría';
+            let catId = t.categoryId;
 
             if (t.categoryId && window.categoryManager) {
                 const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
@@ -3136,19 +3255,16 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
                 catColor = getTaskColor(t.id);
             }
 
-            // Display Info (Time/Date in Month View)
             let metaDisplay = t.dueTime ? `⏰ ${t.dueTime}` : '';
-            if (isMonthView) {
-                // In month view, show full date if specific
+            if (isMonthView || isWeekdayView) {
                 const d = parseTaskDate(t.dueDate);
                 if (d) metaDisplay = `📅 ${d.getDate()}/${d.getMonth() + 1} ${metaDisplay}`;
             }
 
-            // Render
             item.innerHTML = `
                 <div class="card-item-left" style="border-left: 4px solid ${catColor}">
                     <div class="card-item-header">
-                        <span class="card-category-badge" style="background:${hexToRgba(catColor, 0.15)}; color:${catColor}">
+                        <span class="card-category-badge" title="Filtrar por esta categoría" style="background:${hexToRgba(catColor, 0.15)}; color:${catColor}; cursor:pointer;">
                             ${catEmoji} ${catName}
                         </span>
                         ${metaDisplay ? `<span class="card-time-badge">${metaDisplay}</span>` : ''}
@@ -3158,22 +3274,25 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
                         <small>${getRemainingDays(t.dueDate)}</small>
                     </div>
                 </div>
-                <div class="card-item-actions">
-                     <!-- Buttons via JS -->
-                </div>
+                <div class="card-item-actions"></div>
             `;
+
+            // Interaction: Filter by Category
+            const badge = item.querySelector('.card-category-badge');
+            badge.onclick = (e) => {
+                e.stopPropagation();
+                if (catId) {
+                    currentCardFilterCategory = catId;
+                    openCalendarDetailCard(dateStr, isMonthView, isWeekdayView);
+                }
+            };
 
             const actionsContainer = item.querySelector('.card-item-actions');
 
-            // Actions Buttons (Re-used logic)
             const checkBtn = document.createElement('button');
             checkBtn.className = 'action-btn check-btn';
             checkBtn.innerHTML = t.completed ? '↩️' : '✅';
-            checkBtn.onclick = async (e) => {
-                e.stopPropagation();
-                await toggleTaskStatus(t.id);
-                openCalendarDetailCard(dateStr, isMonthView);
-            };
+            checkBtn.onclick = async (e) => { e.stopPropagation(); await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); };
 
             const editBtn = document.createElement('button');
             editBtn.className = 'action-btn edit-btn';
@@ -3190,7 +3309,7 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
             delBtn.innerHTML = '🗑️';
             delBtn.onclick = async (e) => {
                 e.stopPropagation();
-                if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView); }
+                if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); }
             };
 
             actionsContainer.appendChild(checkBtn);
@@ -3203,9 +3322,9 @@ function openCalendarDetailCard(dateStr, isMonthView = false) {
     }
 
     modal.style.display = 'flex';
-
     modal.querySelector('.close-btn').onclick = () => {
         modal.style.display = 'none';
+        currentCardFilterCategory = null;
         if (typeof renderCalendar === 'function') renderCalendar();
     };
 }
