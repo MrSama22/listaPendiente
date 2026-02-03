@@ -157,7 +157,7 @@ button.danger-btn:hover {
 }
 
 .command-help {
-    background-color: #1e1e1e6e;
+    background-color: rgba(30, 30, 30, 0.431);
     border-left: 4px solid #00e676b8;
 }
 
