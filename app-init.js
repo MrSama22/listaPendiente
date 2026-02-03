@@ -119,9 +119,52 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
-});
 
-// Background Theme Selector
+    // Calendar Style Setting
+    const calendarStyleSelect = document.getElementById('calendarStyleSelect');
+    if (calendarStyleSelect) {
+        const savedStyle = localStorage.getItem('calendarStyle') || 'modern';
+        calendarStyleSelect.value = savedStyle;
+
+        // Apply initial style class to body or calendar container
+        document.body.setAttribute('data-calendar-style', savedStyle);
+
+        calendarStyleSelect.addEventListener('change', (e) => {
+            const newStyle = e.target.value;
+            localStorage.setItem('calendarStyle', newStyle);
+            document.body.setAttribute('data-calendar-style', newStyle);
+
+            if (typeof window.renderCalendar === 'function') {
+                window.renderCalendar();
+            }
+            console.log('📅 Calendar style changed to:', newStyle);
+        });
+    }
+
+    // Background Theme Selector
+    const bgThemeSelect = document.getElementById('bgThemeSelect');
+    if (bgThemeSelect) {
+        const savedBg = localStorage.getItem('backgroundTheme') || 'bg-dark-space';
+        bgThemeSelect.value = savedBg;
+
+        // Aplicar fondo inicial si Glassmorphism está activo
+        if (localStorage.getItem('glassmorphism') === 'enabled') {
+            document.body.className = document.body.className.replace(/bg-\w+(-\w+)?/g, '').trim(); // Remove old bg classes
+            document.body.classList.add('glassmorphism-enabled', savedBg);
+        }
+
+        bgThemeSelect.addEventListener('change', (e) => {
+            const newTheme = e.target.value;
+            localStorage.setItem('backgroundTheme', newTheme);
+
+            if (document.body.classList.contains('glassmorphism-enabled')) {
+                // Remover clases de fondo anteriores
+                document.body.className = document.body.className.replace(/bg-\w+(-\w+)?/g, '').trim();
+                document.body.classList.add('glassmorphism-enabled', newTheme); // Mantener glass y agregar nuevo fondo
+            }
+        });
+    }
+});
 const bgThemeSelectEl = document.getElementById('bgThemeSelect');
 if (bgThemeSelectEl) {
     // Load saved background theme

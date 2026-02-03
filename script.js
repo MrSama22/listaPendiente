@@ -2558,6 +2558,7 @@ function addTasksToCalendarDay(dayEl, date) {
             const taskEl = document.createElement('div');
             taskEl.className = 'calendar-task';
             taskEl.dataset.id = t.id;
+            taskEl.title = `${t.name} (${t.dueTime || 'Todo el día'})`; // Tooltip nativo
             taskEl.draggable = true;
             taskEl.addEventListener('dragstart', handleDragStart);
             taskEl.addEventListener('dragend', handleDragEnd);
