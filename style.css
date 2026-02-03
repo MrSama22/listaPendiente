@@ -552,9 +552,9 @@ button.logout:hover {
     grid-auto-rows: minmax(60px, auto);
     border-top: 1px solid #e0e0e0;
     border-left: 1px solid #e0e0e0;
-    /*width: 100%;*/
+    width: 100%; /* 100% del ancho del contenedor se desactiva con margin 10 */
     box-sizing: border-box;
-    margin: 10px;
+    /*margin: 10px;*/
 }
 
 .calendar-day {
