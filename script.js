@@ -3624,7 +3624,7 @@ function renderCategoryFilters(categories) {
             if (isActive) {
                 // Si está activo, lo hacemos un poco más fuerte para que se note la selección
                 bgStyle = `background-color: ${hexToRgba(color, 0.4)} !important; 
-                           color: #ffffffd9 !important; 
+                           color: ${color} !important; 
                            border: 1px solid ${color} !important;
                            font-weight: lighter;
                            box-shadow: 0 0 12px ${hexToRgba(color, 0.3)};
@@ -3632,7 +3632,7 @@ function renderCategoryFilters(categories) {
             } else {
                 // ESTADO NORMAL: Exactamente como pediste
                 bgStyle = `background-color: ${bgColor}; 
-                           color: ${color}; 
+                           color: #ffffffd9 !important; 
                            border: 1px solid ${borderColor};`;
             }
         } else {
