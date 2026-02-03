@@ -2909,7 +2909,246 @@ window.renderCalendarWithTouch = function () {
     setTimeout(addTouchDragToCalendarTasks, 100);
 };
 
-// Override renderCalendar
+// ---- CALENDAR DETAIL CARDS (PREMIUM FEATURE) ----
+
+// ---- CALENDAR DETAIL CARDS (PREMIUM FEATURE) ----
+
+function openCalendarDetailCard(dateStr, isMonthView = false) {
+    const modal = document.getElementById('calendarDetailsModal');
+    const titleEl = document.getElementById('calendarDetailsTitle');
+    const subtitleEl = document.getElementById('calendarDetailsSubtitle');
+    const bodyEl = document.getElementById('calendarDetailsBody');
+    const actionBtn = document.getElementById('calendarDetailsActionBtn');
+
+    if (!modal) return;
+
+    // Reset content
+    bodyEl.innerHTML = '';
+
+    let filteredTasks = [];
+    let displayTitle = '';
+    let displaySubtitle = '';
+
+    if (isMonthView) {
+        // SUMMARY OF MONTH
+        const [monthName, year] = dateStr.split(' '); // "Enero 2026"
+        displayTitle = monthName;
+        displaySubtitle = `Resumen de ${year}`;
+
+        // Match month name
+        const mIndex = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"].indexOf(monthName);
+
+        filteredTasks = tasks.filter(t => {
+            const d = parseTaskDate(t.dueDate);
+            return d && d.getMonth() === mIndex && d.getFullYear() == year;
+        });
+
+        actionBtn.innerHTML = "Ver Todo el Mes";
+        actionBtn.onclick = () => {
+            modal.style.display = 'none';
+            // Maybe switch view to list? For now just close
+        };
+    } else {
+        // DAY DETAILS
+        const dateObj = new Date(dateStr);
+        const userTimezoneOffset = dateObj.getTimezoneOffset() * 60000;
+        const adjustedDate = new Date(dateObj.getTime() + userTimezoneOffset);
+
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        displayTitle = adjustedDate.toLocaleDateString('es-ES', options);
+        displayTitle = displayTitle.charAt(0).toUpperCase() + displayTitle.slice(1);
+
+        filteredTasks = tasks.filter(t => {
+            const parsedDate = parseTaskDate(t.dueDate);
+            if (!parsedDate) return false;
+            return parsedDate.toISOString().split('T')[0] === dateStr;
+        });
+
+        const pendingCount = filteredTasks.filter(t => !t.completed).length;
+        displaySubtitle = pendingCount === 0 ? '¡Día libre! 🎉' : `${pendingCount} tareas pendientes`;
+
+        actionBtn.textContent = "Añadir Nueva Tarea";
+        actionBtn.onclick = () => {
+            modal.style.display = 'none';
+            // Open main add task modal or logic
+            // Pre-fill date logic could be added here
+            const dateInput = document.getElementById('taskDate');
+            if (dateInput) dateInput.value = dateStr;
+            const addTaskModal = document.querySelector('.add-task button'); // Assuming this triggers open
+            if (addTaskModal) addTaskModal.click();
+        };
+    }
+
+    titleEl.textContent = displayTitle;
+    subtitleEl.textContent = displaySubtitle;
+
+    if (filteredTasks.length === 0) {
+        bodyEl.innerHTML = `
+            <div class="empty-state-card">
+                <div style="font-size: 3em; margin-bottom: 10px;">🍃</div>
+                <div>No hay tareas para este período</div>
+            </div>`;
+    } else {
+        // Sort: Pending first, then by time
+        filteredTasks.sort((a, b) => {
+            if (a.completed !== b.completed) return a.completed ? 1 : -1;
+            return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
+        });
+
+        filteredTasks.forEach(t => {
+            const item = document.createElement('div');
+            item.className = `detail-card-item ${t.completed ? 'completed' : ''}`;
+
+            // Category info
+            let catColor = 'var(--primary-color)';
+            let catEmoji = '📝';
+            let catName = 'Sin categoría';
+
+            if (t.categoryId && window.categoryManager) {
+                const cat = window.categoryManager.categories.find(c => c.id === t.categoryId);
+                if (cat) {
+                    catColor = cat.color || catColor;
+                    catEmoji = cat.emoji || catEmoji;
+                    catName = cat.name;
+                }
+            } else {
+                catColor = getTaskColor(t.id);
+            }
+
+            const timeStr = t.dueTime ? t.dueTime : '--:--';
+
+            // Structure
+            item.innerHTML = `
+                <div class="card-item-left" style="border-left: 4px solid ${catColor}">
+                    <div class="card-item-header">
+                        <span class="card-category-badge" style="background:${hexToRgba(catColor, 0.15)}; color:${catColor}">
+                            ${catEmoji} ${catName}
+                        </span>
+                        ${t.dueTime ? `<span class="card-time-badge">⏰ ${t.dueTime}</span>` : ''}
+                    </div>
+                    <div class="card-item-title">${t.name}</div>
+                    <div class="card-item-footer">
+                        <small>${getRemainingDays(t.dueDate)}</small>
+                    </div>
+                </div>
+                <div class="card-item-actions">
+                     <!-- Buttons injected via JS -->
+                </div>
+            `;
+
+            const actionsContainer = item.querySelector('.card-item-actions');
+
+            // 1. Checkbox (Status)
+            const checkBtn = document.createElement('button');
+            checkBtn.className = 'action-btn check-btn';
+            checkBtn.innerHTML = t.completed ? '↩️' : '✅';
+            checkBtn.title = t.completed ? 'Marcar pendiente' : 'Completar';
+            checkBtn.onclick = async (e) => {
+                e.stopPropagation();
+                await toggleTaskStatus(t.id);
+                openCalendarDetailCard(dateStr, isMonthView); // Refresh
+            };
+
+            // 2. Edit
+            const editBtn = document.createElement('button');
+            editBtn.className = 'action-btn edit-btn';
+            editBtn.innerHTML = '✏️';
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                modal.style.display = 'none'; // Close detail card
+                showEditModal(t.id);
+            };
+
+            // 3. Reminder
+            const remBtn = document.createElement('button');
+            remBtn.className = 'action-btn rem-btn';
+            remBtn.innerHTML = '🔔';
+            remBtn.onclick = (e) => {
+                e.stopPropagation();
+                showReminderConfigModal(t);
+            };
+
+            // 4. Delete
+            const delBtn = document.createElement('button');
+            delBtn.className = 'action-btn del-btn';
+            delBtn.innerHTML = '🗑️';
+            delBtn.onclick = async (e) => {
+                e.stopPropagation();
+                if (confirm('¿Eliminar esta tarea?')) {
+                    await deleteTask(t.id); // This already prompts confirm usually, but we called it directly? 
+                    // deleteTask has its own confirm.
+                    // IMPORTANT: deleteTask reloads/refreshes UI often.
+                    // We might need to manually refresh our card if it doesn't close.
+                    // But deleteTask logic might not auto-close our modal.
+
+                    // Let's assume deleteTask handles the DB.
+                    // We need to refresh THE CARD.
+                    // Wait, deleteTask has confirm inside it.
+                    // So we might get double confirm if I add one here.
+                    // I'll call deleteTask directly.
+
+                    // Problem: deleteTask might be async or not return promise correctly in older code?
+                    // It is async.
+
+                    // Actually, better to just call it and let it handle UI.
+                    // But we want to update THIS list if the user cancels.
+                }
+            };
+            // Override Delete button logic to keep it simple and refreshing
+            delBtn.onclick = async (e) => {
+                e.stopPropagation();
+                // Call global delete
+                await deleteTask(t.id);
+                openCalendarDetailCard(dateStr, isMonthView); // Refresh list
+            };
+
+            actionsContainer.appendChild(checkBtn);
+            actionsContainer.appendChild(editBtn);
+            if (!t.completed) actionsContainer.appendChild(remBtn);
+            actionsContainer.appendChild(delBtn);
+
+            bodyEl.appendChild(item);
+        });
+    }
+
+    // Centering Logic: Use Flex
+    modal.style.display = 'flex';
+
+    // Close button logic
+    modal.querySelector('.close-btn').onclick = () => {
+        modal.style.display = 'none';
+        if (typeof renderCalendar === 'function') renderCalendar(); // Refresh calendar on close just in case
+    };
+
+    // Close on outside click is moved to global listener to avoid duplicates
+}
+
+// Attach Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Event delegation for Calendar Days
+    const calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        calendarEl.addEventListener('click', (e) => {
+            const dayEl = e.target.closest('.calendar-day');
+            if (dayEl) {
+                const dateStr = dayEl.dataset.date;
+                if (dateStr) openCalendarDetailCard(dateStr);
+            }
+        });
+    }
+
+    // Listener for Month Header
+    const monthHeader = document.getElementById('currentMonthYear');
+    if (monthHeader) {
+        monthHeader.style.cursor = 'pointer';
+        monthHeader.title = 'Ver resumen del mes';
+        monthHeader.addEventListener('click', (e) => {
+            const text = e.target.textContent; // "Enero 2026"
+            openCalendarDetailCard(text, true);
+        });
+    }
+});
+// Override renderCalendar (Previous logic kept intact but moved)
 (function () {
     const origRender = window.initCalendar;
     if (origRender) {
