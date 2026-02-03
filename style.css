@@ -319,7 +319,7 @@ h4 {
     width: 80%;
     max-width: 500px;
     /* Keep a reasonable max-width */
-    position: relative;    
+    position: relative;
     margin-top: 450px;
 
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -530,6 +530,7 @@ button.logout:hover {
     font-weight: bold;
     width: 100%;
     box-sizing: border-box;
+    margin-bottom: 15px;
 }
 
 .weekdays div {
@@ -1684,37 +1685,33 @@ body[data-calendar-style="modern"] .calendar-day.today .calendar-day-number {
 }
 
 /* --- PUNTOS DE TAREAS (DOTS) --- */
-/* Los colocamos flotando alrededor o debajo */
 body[data-calendar-style="modern"] .calendar-task {
     width: 6px;
     height: 6px;
     padding: 0;
-    margin: 1px;
+    margin: 2px;
+    /* Increased margin for spacing between dots */
     border-radius: 50%;
     border: none !important;
     font-size: 0;
     color: transparent;
-    position: absolute;
-    /* Posicionamiento absoluto podría ser lioso con muchas tareas */
-    /* Mejor relative y usar flex wrap */
+
+    /* Clean positioning */
     position: relative;
     display: inline-block;
 
     box-shadow: 0 0 5px currentColor;
-    bottom: -15px;
-    /* Empujarlos hacia abajo visualmente dentro del flex */
+    /* Removed bottom: -15px which pushed them out */
 }
 
 /* Dots completados (verde tenue) */
 body[data-calendar-style="modern"] .calendar-task.completed-dot {
     background-color: #00e676 !important;
     opacity: 0.3;
-    /* Tenue para no distraer */
     box-shadow: 0 0 2px #00e676;
 }
 
 body[data-calendar-style="modern"] .calendar-task:not(.completed-dot) {
-    /* Puntos pendientes brillan más */
     opacity: 1;
     z-index: 3;
 }
@@ -1731,6 +1728,9 @@ body[data-calendar-style="modern"] .calendar-day {
     flex-direction: row;
     flex-wrap: wrap;
     align-content: flex-end;
-    /* Puntos abajo */
-    padding-bottom: 15px;
+    justify-content: center;
+    /* Center dots horizontally */
+    padding: 5px 10px 12px 10px;
+    /* Padding to keep away from edges */
+    gap: 1px;
 }
