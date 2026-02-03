@@ -110,6 +110,7 @@ button:disabled {
     transform: translateY(-50%);
     /* Mantenemos el centrado vertical */
     display: flex;
+    height: 97.5%;
 
     /* --- Glassmorphism Global --- */
     background: rgb(139 139 139 / 28%);
@@ -137,7 +138,6 @@ button:disabled {
 
 /* Estado inicial de los botones: invisibles y desplazados a la derecha */
 .task-actions button {
-    height: 97.5%;
     opacity: 0;
     transform: translateX(20px);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
