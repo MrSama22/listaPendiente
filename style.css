@@ -1551,8 +1551,16 @@ ul.styled-list {
 }
 
 /* =========================================
-   MODERN / INNOVATIVE CALENDAR STYLE
+   MODERN / GAMIFIED (RINGS) CALENDAR STYLE
    ========================================= */
+
+/* --- AJUSTES GLOBALES PARA MODO CLÁSICO --- */
+/* En modo clásico, ocultamos los dots de completados para mantener la limpieza */
+body:not([data-calendar-style="modern"]) .calendar-task.completed-dot {
+    display: none;
+}
+
+/* --- ESTILOS MODO MODERNO (GAMIFIED) --- */
 
 body[data-calendar-style="modern"] .calendar-container {
     background: transparent !important;
@@ -1561,115 +1569,166 @@ body[data-calendar-style="modern"] .calendar-container {
 }
 
 body[data-calendar-style="modern"] .calendar-header {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(20, 20, 20, 0.4);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-radius: 20px;
-    margin-bottom: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     padding: 15px 20px;
 }
 
 body[data-calendar-style="modern"] .calendar-grid {
-    gap: 12px;
+    gap: 15px;
+    /* Más espacio para los anillos */
     background: transparent !important;
     border: none !important;
 }
 
 body[data-calendar-style="modern"] .calendar-day {
-    background: rgba(255, 255, 255, 0.65);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* Fondo oscuro glass */
+    background: rgba(30, 30, 30, 0.4);
+    border-radius: 50%;
+    /* Días redondos o con esquinas muy redondeadas */
+    aspect-ratio: 1;
+    /* Cuadrados perfectos */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 8px;
-    min-height: 80px;
-    /* Cartas más compactas y bonitas */
+    justify-content: center;
+    position: relative;
+    overflow: visible;
+    /* Permitir brillo exterior */
+    min-height: auto;
+}
+
+/* --- ANILLO DE PROGRESO --- */
+body[data-calendar-style="modern"] .calendar-day::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    /* Un poco más grande que el día */
+    border-radius: 50%;
+    padding: 2px;
+    /* Grosor del borde */
+
+    /* EL ANILLO MÁGICO */
+    background: conic-gradient(#00e676 var(--progress, 0%),
+            rgba(255, 255, 255, 0.05) 0%);
+
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+
+    opacity: 0.8;
+    transition: --progress 1s ease-out;
+    /* Requiere @property, pero degradará bien */
+    pointer-events: none;
+}
+
+/* DÍA COMPLETADO AL 100% (Neon Glow) */
+body[data-calendar-style="modern"] .calendar-day.fully-completed {
+    box-shadow: 0 0 15px rgba(0, 230, 118, 0.3), inset 0 0 20px rgba(0, 230, 118, 0.1);
+    border-color: rgba(0, 230, 118, 0.5);
+    background: rgba(0, 230, 118, 0.05);
+}
+
+body[data-calendar-style="modern"] .calendar-day.fully-completed::before {
+    background: #00e676;
+    /* Anillo completo sólido */
+    box-shadow: 0 0 10px #00e676;
 }
 
 /* Glassmorphism support */
 body[data-calendar-style="modern"].glassmorphism-enabled .calendar-day {
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(4px);
 }
 
-body[data-calendar-style="modern"].glassmorphism-enabled .calendar-day:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    z-index: 2;
-    border-color: rgba(255, 255, 255, 0.3) !important;
+body[data-calendar-style="modern"] .calendar-day:hover {
+    transform: scale(1.1);
+    z-index: 10;
+    box-shadow: 0 0 25px rgba(0, 230, 118, 0.2);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 body[data-calendar-style="modern"] .calendar-day-number {
-    font-weight: 700;
-    font-size: 1.1em;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    margin-bottom: 8px;
-    transition: all 0.3s ease;
+    font-weight: 800;
+    font-size: 1.2em;
+    width: 100%;
+    text-align: center;
+    z-index: 2;
+    margin-bottom: 0;
+    pointer-events: none;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Ajuste para "HOY" en modo gamificado */
 body[data-calendar-style="modern"] .calendar-day.today .calendar-day-number {
-    background: linear-gradient(135deg, #00e676, #00c853);
-    box-shadow: 0 4px 12px rgba(0, 230, 118, 0.5);
-    color: #fff;
-    transform: scale(1.1);
+    background: transparent;
+    box-shadow: none;
+    color: #00e676;
+    transform: none;
+    font-size: 1.4em;
 }
 
-/* --- TRANSFORMACIÓN DE TAREAS A PUNTOS --- */
+/* --- PUNTOS DE TAREAS (DOTS) --- */
+/* Los colocamos flotando alrededor o debajo */
 body[data-calendar-style="modern"] .calendar-task {
-    width: 10px;
-    height: 10px;
+    width: 6px;
+    height: 6px;
     padding: 0;
-    margin: 3px;
+    margin: 1px;
     border-radius: 50%;
     border: none !important;
     font-size: 0;
     color: transparent;
+    position: absolute;
+    /* Posicionamiento absoluto podría ser lioso con muchas tareas */
+    /* Mejor relative y usar flex wrap */
+    position: relative;
     display: inline-block;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background-clip: padding-box;
+
+    box-shadow: 0 0 5px currentColor;
+    bottom: -15px;
+    /* Empujarlos hacia abajo visualmente dentro del flex */
+}
+
+/* Dots completados (verde tenue) */
+body[data-calendar-style="modern"] .calendar-task.completed-dot {
+    background-color: #00e676 !important;
+    opacity: 0.3;
+    /* Tenue para no distraer */
+    box-shadow: 0 0 2px #00e676;
+}
+
+body[data-calendar-style="modern"] .calendar-task:not(.completed-dot) {
+    /* Puntos pendientes brillan más */
+    opacity: 1;
+    z-index: 3;
 }
 
 body[data-calendar-style="modern"] .calendar-task:hover {
-    transform: scale(2.2);
-    box-shadow: 0 0 10px currentColor;
-    z-index: 10;
+    transform: scale(3);
+    z-index: 20;
+    opacity: 1 !important;
 }
 
-/* Alineación de puntos */
+/* Layout flex para los puntos dentro del círculo */
 body[data-calendar-style="modern"] .calendar-day {
-    align-content: center;
-    flex-wrap: wrap;
+    display: flex;
     flex-direction: row;
-    /* Para que los puntos se apilen horizontalmente */
-    justify-content: center;
-    padding: 5px;
-    padding-top: 40px;
-    /* Espacio para el número */
-    position: relative;
-}
-
-body[data-calendar-style="modern"] .calendar-day-number {
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-body[data-calendar-style="modern"] .calendar-day.today .calendar-day-number {
-    transform: translateX(-50%) scale(1.1);
+    flex-wrap: wrap;
+    align-content: flex-end;
+    /* Puntos abajo */
+    padding-bottom: 15px;
 }

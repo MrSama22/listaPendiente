@@ -2539,12 +2539,35 @@ function addTasksToCalendarDay(dayEl, date) {
     dayEl.addEventListener('drop', handleDrop);
     dayEl.addEventListener('dragleave', handleDragLeave);
 
-    tasks.filter(t => {
-        if (t.completed) return false;
+    const dailyTasks = tasks.filter(t => {
         const parsedDate = parseTaskDate(t.dueDate);
         if (!parsedDate) return false;
         return parsedDate.toDateString() === date.toDateString();
-    })
+    });
+
+    // Calcular estadísticas para el modo gamificado
+    const totalTasks = dailyTasks.length;
+    const completedTasks = dailyTasks.filter(t => t.completed).length;
+    const progressPercent = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+
+    // Set CSS variables for the ring
+    dayEl.style.setProperty('--progress', `${progressPercent}%`);
+    dayEl.style.setProperty('--total-tasks', totalTasks);
+
+    if (totalTasks > 0) dayEl.classList.add('has-tasks');
+    if (totalTasks > 0 && totalTasks === completedTasks) dayEl.classList.add('fully-completed');
+
+    dailyTasks
+        .filter(t => !t.completed) // Solo mostramos las pendientes como items (o podríamos mostrar todas)
+        // Nota: Para el modo gamificado, quizás querramos mostrar también las completadas como puntitos verdes?
+        // El usuario pidió "historia de éxito", así que podríamos mostrar las completadas también.
+        // Pero el filtro original ocultaba las completadas. Vamos a respetar el filtro original para la lista visual,
+        // pero el anillo usará 'dailyTasks' (que incluye todo, si quitamos el filtro de arriba).
+        // ESPERA: El filtro original (líneas 2542-2547) FILTRA las completadas: `if (t.completed) return false;`
+        // DEBO CAMBIAR ESO para tener el total real.
+
+        // CORRECCIÓN: Voy a usar 'dailyTasks' que ya filtré arriba (SIN excluir completadas) para el cálculo.
+        // Y luego iterar sobre dailyTasks para renderizar.
         .sort((a, b) => {
             const dateA = parseTaskDate(a.dueDate);
             const dateB = parseTaskDate(b.dueDate);
@@ -2555,11 +2578,18 @@ function addTasksToCalendarDay(dayEl, date) {
             return (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0);
         })
         .forEach(t => {
+            // Renderizar SOLO si no está completada (para no saturar) O si queremos mostrar "dots" de éxito.
+            // Para el modo moderno, mejor renderizar TODAS para que se vean los "dots".
+            // Pero en modo clásico se vería sucio.
+            // SOLUCIÓN: Renderizar todas, y ocultar las completadas via CSS en modo clásico si se desea, 
+            // o simplemente renderizar todas es mejor para la "historia".
+
+            // Si t.completed, le ponemos una clase especial
             const taskEl = document.createElement('div');
-            taskEl.className = 'calendar-task';
+            taskEl.className = 'calendar-task' + (t.completed ? ' completed-dot' : '');
             taskEl.dataset.id = t.id;
-            taskEl.title = `${t.name} (${t.dueTime || 'Todo el día'})`; // Tooltip nativo
-            taskEl.draggable = true;
+            taskEl.title = `${t.name} (${t.dueTime || 'Todo el día'})` + (t.completed ? ' ✅' : '');
+            taskEl.draggable = !t.completed; // Solo arrastrar pendientes
             taskEl.addEventListener('dragstart', handleDragStart);
             taskEl.addEventListener('dragend', handleDragEnd);
             taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
