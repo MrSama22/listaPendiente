@@ -3321,11 +3321,22 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
     }
 
     modal.style.display = 'flex';
-    modal.querySelector('.close-btn').onclick = () => {
+    document.body.style.overflow = 'hidden'; // Lock Scroll
+
+    const closeCard = () => {
         modal.style.display = 'none';
+        document.body.style.overflow = ''; // Unlock Scroll
         currentCardFilterCategory = null;
         if (typeof renderCalendar === 'function') renderCalendar();
+        document.removeEventListener('keydown', onEscKey);
     };
+
+    const onEscKey = (e) => {
+        if (e.key === 'Escape') closeCard();
+    };
+    document.addEventListener('keydown', onEscKey);
+
+    modal.querySelector('.close-btn').onclick = closeCard;
 }
 
 // Attach Listeners

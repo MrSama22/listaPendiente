@@ -530,7 +530,8 @@ button.logout:hover {
     font-weight: bold;
     width: 100%;
     box-sizing: border-box;
-    margin-bottom: 15px;
+    
+    
 }
 
 .weekdays div {
@@ -551,8 +552,9 @@ button.logout:hover {
     grid-auto-rows: minmax(60px, auto);
     border-top: 1px solid #e0e0e0;
     border-left: 1px solid #e0e0e0;
-    width: 100%;
+    /*width: 100%;*/
     box-sizing: border-box;
+    margin: 10px;
 }
 
 .calendar-day {
@@ -1232,7 +1234,7 @@ ul.styled-list {
 
     .calendar-day {
         min-width: 80px;
-        min-height: 50px;
+        min-height: 60px;
         padding: 2px;
     }
 
