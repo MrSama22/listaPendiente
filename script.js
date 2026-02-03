@@ -2519,7 +2519,7 @@ function renderCalendar() {
     monthYrEl.innerHTML = `
         <span style="vertical-align:middle;">${mNames[m]} ${y}</span>
         <span id="calFilterArrow" style="cursor:pointer; font-size:0.8em; opacity:0.7; vertical-align:middle; margin-left:8px; display:inline-block; padding:4px;">▼</span>
-        <div id="calCustomFilterDropdown" style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:1rem; font-weight:normal; text-align:left;"></div>
+        <div id="calCustomFilterDropdown" style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:1rem; font-weight:normal; text-align:left;"></div>
     `;
 
     // Ensure parent relative for dropdown
@@ -2528,6 +2528,7 @@ function renderCalendar() {
     monthYrEl.style.justifyContent = 'center';
     monthYrEl.style.alignItems = 'center';
     monthYrEl.style.overflow = 'visible';       // Allow dropdown overflow
+    monthYrEl.style.zIndex = '50';              // Lift header above calendar body
 
     // Logic for Arrow/Dropdown
     const arrowBtn = document.getElementById('calFilterArrow');

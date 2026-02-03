@@ -516,7 +516,7 @@ button.logout:hover {
 
 .calendar-header h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 23px;
     color: #fff;
     font-weight: normal;
     border: none;
@@ -1574,8 +1574,8 @@ body[data-calendar-style="modern"] .calendar-header {
     background: rgba(20, 20, 20, 0.4);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 20px;
-    margin-bottom: 20px;
+    border-radius-top: 20px;
+    margin-bottom: 5px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     padding: 15px 20px;
@@ -1666,7 +1666,7 @@ body[data-calendar-style="modern"] .calendar-day:hover {
 body[data-calendar-style="modern"] .calendar-day-number {
     font-weight: 800;
     font-size: 1.2em;
-    width: 100%;
+    width: 32%;
     text-align: center;
     z-index: 2;
     margin-bottom: 0;
