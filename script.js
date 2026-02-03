@@ -2506,72 +2506,76 @@ function renderCalendar() {
     const calEl = document.getElementById('calendar'), monthYrEl = document.getElementById('currentMonthYear');
     if (!calEl || !monthYrEl) return;
 
-    // --- CUSTOM FILTER ▼ (Arrow UI) ---
-    // Remove old standard select if exists
-    const oldFilter = document.getElementById('calendarFilterContainer');
-    if (oldFilter) oldFilter.remove();
+    // --- CUSTOM FILTER ▼ (Integrated into Title) ---
+    // Clear old external wrapper if exists
+    const oldWrapper = document.getElementById('calCustomFilterWrapper');
+    if (oldWrapper) oldWrapper.remove();
 
-    // Check if Custom Filter exists, if not create
-    let customFilterWrapper = document.getElementById('calCustomFilterWrapper');
-    if (!customFilterWrapper && monthYrEl.parentNode) {
-        customFilterWrapper = document.createElement('div');
-        customFilterWrapper.id = 'calCustomFilterWrapper';
-        customFilterWrapper.style.cssText = "position:relative; display:inline-block; vertical-align:middle; margin-left:2px;";
+    // Set Title text + Arrow
+    const y = currentCalendarDate.getFullYear(), m = currentCalendarDate.getMonth();
+    const mNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-        const arrowBtn = document.createElement('span');
-        arrowBtn.innerHTML = '▼'; // Elegant arrow
-        arrowBtn.style.cssText = "cursor:pointer; font-size:0.8em; opacity:0.7; color:white; transition:all 0.2s; padding:5px 8px; border-radius:4px;";
-        arrowBtn.onmouseover = () => { arrowBtn.style.opacity = '1'; arrowBtn.style.background = 'rgba(255,255,255,0.1)'; };
-        arrowBtn.onmouseout = () => { arrowBtn.style.opacity = '0.7'; arrowBtn.style.background = 'transparent'; };
+    // We insert arrow directly into H3 to keep them grouped and centered
+    monthYrEl.innerHTML = `
+        <span style="vertical-align:middle;">${mNames[m]} ${y}</span>
+        <span id="calFilterArrow" style="cursor:pointer; font-size:0.8em; opacity:0.7; vertical-align:middle; margin-left:8px; display:inline-block; padding:4px;">▼</span>
+        <div id="calCustomFilterDropdown" style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:1rem; font-weight:normal; text-align:left;"></div>
+    `;
 
-        const dropdown = document.createElement('div');
-        dropdown.id = 'calCustomFilterDropdown';
-        dropdown.style.cssText = "display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.4); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);";
+    // Ensure parent relative for dropdown
+    monthYrEl.style.position = 'relative';
+    monthYrEl.style.display = 'flex';           // Flexbox to Center content
+    monthYrEl.style.justifyContent = 'center';
+    monthYrEl.style.alignItems = 'center';
+    monthYrEl.style.overflow = 'visible';       // Allow dropdown overflow
 
-        const populateDropdown = () => {
-            dropdown.innerHTML = '';
+    // Logic for Arrow/Dropdown
+    const arrowBtn = document.getElementById('calFilterArrow');
+    const dropdown = document.getElementById('calCustomFilterDropdown');
 
-            // "All" Option
-            const addOp = (id, label, icon) => {
-                const op = document.createElement('div');
-                op.innerHTML = `<span style="width:20px; text-align:center;">${icon}</span> ${label}`;
-                op.style.cssText = "padding:8px 12px; cursor:pointer; border-radius:8px; color:white; font-size:0.9em; display:flex; align-items:center; gap:8px; transition:background 0.2s;";
-                op.onmouseover = () => op.style.background = 'rgba(255,255,255,0.1)';
-                op.onmouseout = () => op.style.background = 'transparent';
-                op.onclick = () => {
-                    window.currentCalendarCategoryFilter = id;
-                    renderCalendar();
-                    dropdown.style.display = 'none';
-                };
-                dropdown.appendChild(op);
+    arrowBtn.onmouseover = () => { arrowBtn.style.opacity = '1'; };
+    arrowBtn.onmouseout = () => { arrowBtn.style.opacity = '0.7'; };
+
+    const populateDropdown = () => {
+        dropdown.innerHTML = '';
+        const addOp = (id, label, icon) => {
+            const op = document.createElement('div');
+            op.innerHTML = `<span style="width:20px; text-align:center;">${icon}</span> ${label}`;
+            op.style.cssText = "padding:8px 12px; cursor:pointer; border-radius:8px; color:white; font-size:0.9em; display:flex; align-items:center; gap:8px; transition:background 0.2s;";
+            op.onmouseover = () => op.style.background = 'rgba(255,255,255,0.1)';
+            op.onmouseout = () => op.style.background = 'transparent';
+            op.onclick = (e) => {
+                e.stopPropagation();
+                window.currentCalendarCategoryFilter = id;
+                renderCalendar();
             };
-
-            addOp('all', 'Todas las Categorías', '📅');
-
-            if (window.categoryManager && window.categoryManager.categories) {
-                window.categoryManager.categories.forEach(c => {
-                    addOp(c.id, c.name, c.emoji || '📝');
-                });
-            }
+            dropdown.appendChild(op);
         };
 
-        arrowBtn.onclick = (e) => {
-            e.stopPropagation();
-            const isVis = dropdown.style.display === 'block';
-            if (!isVis) populateDropdown();
-            dropdown.style.display = isVis ? 'none' : 'block';
-        };
+        addOp('all', 'Todas las Categorías', '📅');
+        if (window.categoryManager && window.categoryManager.categories) {
+            window.categoryManager.categories.forEach(c => {
+                addOp(c.id, c.name, c.emoji || '📝');
+            });
+        }
+    };
 
-        // Close on global click
-        document.addEventListener('click', (e) => {
-            if (!customFilterWrapper.contains(e.target)) dropdown.style.display = 'none';
-        });
+    arrowBtn.onclick = (e) => {
+        e.stopPropagation();
+        const isVis = dropdown.style.display === 'block';
+        if (!isVis) populateDropdown();
+        dropdown.style.display = isVis ? 'none' : 'block';
+    };
 
-        customFilterWrapper.appendChild(arrowBtn);
-        customFilterWrapper.appendChild(dropdown);
-
-        monthYrEl.parentNode.insertBefore(customFilterWrapper, monthYrEl.nextSibling);
-    }
+    // Close global
+    const closeDropdown = (e) => {
+        if (monthYrEl && !monthYrEl.contains(e.target)) {
+            if (dropdown) dropdown.style.display = 'none';
+        }
+    };
+    document.removeEventListener('click', window.calFilterGlobalClose); // Avoid dups
+    window.calFilterGlobalClose = closeDropdown;
+    document.addEventListener('click', window.calFilterGlobalClose);
 
     // --- WEEKDAY HEADER CLICKS ---
     const weekdayCells = document.querySelectorAll('.calendar-container .weekdays div');
@@ -2580,22 +2584,18 @@ function renderCalendar() {
             "Lun": "Lunes", "Mar": "Martes", "Mié": "Miércoles", "Jue": "Jueves", "Vie": "Viernes", "Sáb": "Sábado", "Dom": "Domingo",
             "Mon": "Lunes", "Tue": "Martes", "Wed": "Miércoles", "Thu": "Jueves", "Fri": "Viernes", "Sat": "Sábado", "Sun": "Domingo"
         };
-
         weekdayCells.forEach(cell => {
             cell.style.cursor = 'pointer';
             cell.title = "Ver tareas de este día (todo el mes)";
-            // Use onclick assignment to avoid duplicates
             cell.onclick = () => {
                 const txt = cell.textContent.trim();
                 const name = fullNames[txt] || txt;
-                openCalendarDetailCard(name, false, true); // (dateStr, isMonth, isWeekday)
+                openCalendarDetailCard(name, false, true);
             };
         });
     }
 
-    const y = currentCalendarDate.getFullYear(), m = currentCalendarDate.getMonth();
-    const mNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    monthYrEl.textContent = `${mNames[m]} ${y}`; calEl.innerHTML = '';
+    calEl.innerHTML = '';
     const firstD = new Date(y, m, 1); let startD = firstD.getDay(); if (startD === 0) startD = 7; startD--;
     const lastD = new Date(y, m + 1, 0); const totalDs = lastD.getDate();
     const prevMLastD = new Date(y, m, 0).getDate();
