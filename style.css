@@ -137,6 +137,7 @@ button:disabled {
 
 /* Estado inicial de los botones: invisibles y desplazados a la derecha */
 .task-actions button {
+    height: 97.5%;
     opacity: 0;
     transform: translateX(20px);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
@@ -1244,12 +1245,12 @@ ul.styled-list {
     .task-actions {
         /* Posicionamiento */
         position: absolute;
-        right: 10px;
+        right: 0px;
         top: 50%;
         transform: translateY(-50%);
         display: flex;
         z-index: 5;
-        height: 97%;
+        height: 100%;
         /* User preference for height on mobile */
 
         /* Glassmorphism inherits from global .task-actions */
