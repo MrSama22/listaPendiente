@@ -2516,7 +2516,7 @@ function renderCalendar() {
     if (!customFilterWrapper && monthYrEl.parentNode) {
         customFilterWrapper = document.createElement('div');
         customFilterWrapper.id = 'calCustomFilterWrapper';
-        customFilterWrapper.style.cssText = "position:relative; display:inline-block; vertical-align:middle; margin-left:8px;";
+        customFilterWrapper.style.cssText = "position:relative; display:inline-block; vertical-align:middle; margin-left:2px;";
 
         const arrowBtn = document.createElement('span');
         arrowBtn.innerHTML = '▼'; // Elegant arrow
@@ -2526,7 +2526,7 @@ function renderCalendar() {
 
         const dropdown = document.createElement('div');
         dropdown.id = 'calCustomFilterDropdown';
-        dropdown.style.cssText = "display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);";
+        dropdown.style.cssText = "display:none; position:absolute; top:120%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.4); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);";
 
         const populateDropdown = () => {
             dropdown.innerHTML = '';
@@ -3064,10 +3064,10 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
         }
 
         formDiv.innerHTML = `
-            <input type="text" id="qaName" placeholder="✨ Nueva tarea..." style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.2); color:white; padding:8px 0; font-size:1.1em; outline:none; width:100%;">
+            <input type="text" id="qaName" placeholder="✨ Nueva tarea..." style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.2); color:white; padding:0px 0; font-size:1.1em; outline:none; width:100%;">
             <div style="display:flex; gap:10px; margin-top:5px;">
                 <input type="time" id="qaTime" style="background:rgba(0,0,0,0.3); border:none; color:white; padding:6px; border-radius:6px; outline:none;">
-                <select id="qaCat" style="background:rgba(0,0,0,0.3); border:none; color:white; border-radius:6px; flex:1; padding:6px; outline:none;">${catOptions}</select>
+                <select id="qaCat" style="background:rgba(0,0,0,0.3); border:none; color:white; border-radius:6px; flex:1; padding:0px; outline:none; margin:0px;">${catOptions}</select>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
                 <button id="qaCancel" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:6px 12px; border-radius:6px; cursor:pointer;">Cancelar</button>
@@ -3096,16 +3096,14 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
 
             try {
                 if (currentUserId) {
-                    await db.collection("users").doc(currentUserId).collection("tasks").add(newTask);
-                    // No need to refresh heavily, standard listener triggers
-                    // But we want to rebuild the list here instantly?
-                    // Let's just remove form and the listener update will handle it?
-                    // Actually listener update re-calls renderCalendar, but maybe not openCalendarDetailCard
-                    // We must manually refresh:
+                    const docRef = await db.collection("users").doc(currentUserId).collection("tasks").add(newTask);
+
+                    // Instant Feedback: Add to local state immediately
+                    const savedTask = { id: docRef.id, ...newTask };
+                    tasks.push(savedTask);
+
                     formDiv.remove();
-                    // Wait 500ms for Firestore local event or just re-render immediately? 
-                    // To be safe and show it "appeared", we can re-call.
-                    setTimeout(() => openCalendarDetailCard(dateStr, isMonthView, isWeekdayView), 300);
+                    openCalendarDetailCard(dateStr, isMonthView, isWeekdayView);
                 }
             } catch (e) { console.error(e); alert('Error al crear: ' + e.message); }
         };

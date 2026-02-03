@@ -830,7 +830,7 @@ body.glassmorphism-enabled .task-item.multi-selected {
 
 /* Glassmorphism Context Menu */
 body.glassmorphism-enabled .task-context-menu {
-    background: rgba(40, 40, 60, 0.85);
+    background: rgba(40, 40, 60, 0.6);
     backdrop-filter: blur(25px) saturate(180%);
     -webkit-backdrop-filter: blur(25px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.15);
