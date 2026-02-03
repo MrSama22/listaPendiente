@@ -105,33 +105,34 @@ button:disabled {
 /* --- INICIO DE MODIFICACIONES --- */
 .task-actions {
     position: absolute;
-    right: 10px;
-    top: 50%;
+    right: 0;
+    top: 52%;
     transform: translateY(-50%);
     /* Mantenemos el centrado vertical */
     display: flex;
 
     /* --- Glassmorphism Global --- */
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-radius: 50px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: rgb(139 139 139 / 28%);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+    border-radius: 15px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.15s ease-in;
+    /* removed separate transform transition if any, to avoid jump */
     z-index: 5;
-    padding: 3px;
-    /* Pequeño ajuste para que no quede pegado */
+    padding: 0px;
+    align-items: center;
 }
 
 .task-item.selected .task-actions {
     opacity: 1;
     pointer-events: auto;
+    /* Ensure transform matches base state to prevent jump */
     transform: translateY(-50%);
-    /* El contenedor ya no se desliza */
 }
 
 /* Estado inicial de los botones: invisibles y desplazados a la derecha */
@@ -139,20 +140,22 @@ button:disabled {
     opacity: 0;
     transform: translateX(20px);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-
-    /* Estilos originales de los botones */
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     padding: 0;
-    margin: 0 3px;
+    margin: 2px 2px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    border-radius: 50%;
+    border-radius: 12px;
     background: rgb(214, 165, 73);
     color: #333;
     border: 1px solid #eee;
+    position: relative;
+    left: 0;
+    align-items: center;
+    align-content: center;
 }
 
 /* Estado final de los botones cuando la tarea está seleccionada */
@@ -1239,30 +1242,19 @@ ul.styled-list {
     }
 
     .task-actions {
-        /* Posicionamiento (esto ya lo tenías bien) */
+        /* Posicionamiento */
         position: absolute;
         right: 10px;
         top: 50%;
+        transform: translateY(-50%);
         display: flex;
         z-index: 5;
+        height: 97%;
+        /* User preference for height on mobile */
 
-        /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
-
-        /* 1. Fondo semitransparente (usamos un blanco sutil) */
-        background: rgba(255, 255, 255, 0.3);
-
-        /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        /* Para Safari */
-
-        /* 3. Borde sutil y redondeado */
-        border-radius: 50px;
-        /* Bordes bien redondeados para un look moderno */
-        border: 1px solid rgba(255, 255, 255, 0.2);
-
-        /* 4. Sombra para dar profundidad */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        /* Glassmorphism inherits from global .task-actions */
+        /* Only adding border-left override if needed */
+        border-left: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .task-item.completed.selected .task-actions {
