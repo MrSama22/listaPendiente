@@ -1680,7 +1680,7 @@ document.addEventListener('click', function (event) {
     if (target.closest('.edit-button')) showEditModal(target.closest('.edit-button').dataset.id);
     else if (target.closest('.toggle-status-button')) toggleTaskStatus(target.closest('.toggle-status-button').dataset.id);
     else if (target.closest('.delete-button')) deleteTask(target.closest('.delete-button').dataset.id);
-    else if (target.closest('.calendar-task')) showEditModal(target.closest('.calendar-task').dataset.id);
+    //else if (target.closest('.calendar-task')) showEditModal(target.closest('.calendar-task').dataset.id);
     else if (target.closest('.calendar-reminder-btn')) {
         const taskId = target.closest('.calendar-reminder-btn').dataset.id;
         const task = tasks.find(t => t.id === taskId);
@@ -2890,29 +2890,32 @@ function handleTouchStart(e) {
     touchDraggedTaskId = taskEl.dataset.id;
 
     // Create visual clone after a short delay (distinguishes from tap)
-    setTimeout(() => {
+    // Iniciar temporizador de 0.5s para activar arrastre
+    touchDragTimer = setTimeout(() => {
         if (!touchDraggedEl) return;
 
         // Clone 1:1 without extra effects as requested
         touchClone = taskEl.cloneNode(true);
         touchClone.classList.add('touch-dragging-clone');
+        // --- AQUÍ PUEDES EDITAR EL ESTILO DEL ELEMENTO ARRASTRADO ---
+        //touchClone.style.opacity = '0.5'; // Ejemplo
+        //touchClone.innerHTML += ' 🖐️'; // Ejemplo icono
 
-        // Mantener estilo original EXACTO, solo posición fija
-        // Al clonar, los estilos inline se mantienen. Solo necesitamos posicionar.
         touchClone.style.position = 'fixed';
-        touchClone.style.top = `${touch.clientY - 20}px`;
-        touchClone.style.left = `${touch.clientX - 50}px`;
+        // Center the clone on the touch point:
+        touchClone.style.top = `${touch.clientY - (taskEl.offsetHeight / 2)}px`;
+        touchClone.style.left = `${touch.clientX - (taskEl.offsetWidth / 2)}px`;
         touchClone.style.width = `${taskEl.offsetWidth}px`;
-        touchClone.style.height = `${taskEl.offsetHeight}px`; // Ensure height matches
-        touchClone.style.margin = '0'; // Reset margins
-        touchClone.style.pointerEvents = 'none'; // Crucial
+        touchClone.style.height = `${taskEl.offsetHeight}px`;
+        touchClone.style.margin = '0';
+        touchClone.style.pointerEvents = 'none';
         touchClone.style.zIndex = '9999';
-        touchClone.style.opacity = '0.9'; // Slight transparency to see underneath
+        touchClone.style.textAlign = 'left'; // Align text left
+
 
         document.body.appendChild(touchClone);
         taskEl.classList.add('touch-dragging-source');
-        // No Pointer events on clone
-    }, 150);
+    }, 500); // 500ms de espera (Long Press)
 }
 
 function handleTouchMove(e) {
@@ -2922,8 +2925,9 @@ function handleTouchMove(e) {
     const touch = e.touches[0];
 
     if (touchClone) {
-        touchClone.style.top = `${touch.clientY - 20}px`;
-        touchClone.style.left = `${touch.clientX - 50}px`;
+        // Center on cursor
+        touchClone.style.top = `${touch.clientY - (touchClone.offsetHeight / 2)}px`;
+        touchClone.style.left = `${touch.clientX - (touchClone.offsetWidth / 2)}px`;
     }
 
     // Highlight the calendar day under the touch
@@ -2945,12 +2949,14 @@ async function handleTouchEnd(e) {
         return;
     }
 
-    const touch = e.changedTouches[0];
-    const elementsUnder = document.elementsFromPoint(touch.clientX, touch.clientY);
-    const calendarDay = elementsUnder.find(el => el.classList.contains('calendar-day'));
+    const taskId = touchDraggedTaskId; // Capture ID before cleanup
+    const calendarDay = document.elementsFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY).find(el => el.classList.contains('calendar-day'));
+
+    // Visual cleanup immediately for "instant" feel
+    cleanupTouchDrag();
 
     if (calendarDay && !calendarDay.classList.contains('other-month')) {
-        const task = tasks.find(t => t.id === touchDraggedTaskId);
+        const task = tasks.find(t => t.id === taskId);
         if (task) {
             const newDateStr = calendarDay.dataset.date;
             if (newDateStr) {
@@ -2966,6 +2972,12 @@ async function handleTouchEnd(e) {
                 } else {
                     newDateTime = new Date(newDate);
                     newDateTime.setHours(23, 59, 59, 999);
+                }
+
+                if (oldDate && newDateTime.getTime() === oldDate.getTime()) {
+                    // Same time/date, no change
+                    cleanupTouchDrag();
+                    return;
                 }
 
                 try {
@@ -2986,8 +2998,6 @@ async function handleTouchEnd(e) {
             }
         }
     }
-
-    cleanupTouchDrag();
 }
 
 function cleanupTouchDrag() {
@@ -3102,13 +3112,25 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
             const name = formDiv.querySelector('#qaName').value;
             if (!name) return alert('Escribe un nombre para la tarea');
 
-            const time = formDiv.querySelector('#qaTime').value;
+            let time = formDiv.querySelector('#qaTime').value;
+            // Default time to 23:59 if empty (User Request)
+            if (!time) {
+                time = '23:59';
+            }
+
             const catId = formDiv.querySelector('#qaCat').value;
+
+            // Fix Date Construction: Create local date using the string values
+            // defaultDate is YYYY-MM-DD. time is HH:MM.
+            // new Date("YYYY-MM-DDTHH:MM") creates a local date object.
+            const localDateObj = new Date(`${defaultDate}T${time}:00`);
 
             const newTask = {
                 name: name,
-                dueDate: defaultDate,
-                dueTime: time || '',
+                dueDate: localDateObj.toISOString(), // Save as ISO
+                // dueTime field is often optional/legacy but we can save it. 
+                // However, the app relies mostly on parseTaskDate(dueDate).
+                dueTime: time,
                 categoryId: catId || '',
                 completed: false,
                 createdAt: firebase.firestore.Timestamp.now()
@@ -3118,9 +3140,11 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
                 if (currentUserId) {
                     const docRef = await db.collection("users").doc(currentUserId).collection("tasks").add(newTask);
 
-                    // Instant Feedback: Add to local state immediately
+                    // Instant Feedback: Add to local state immediately ONLY if not handled by listener
                     const savedTask = { id: docRef.id, ...newTask };
-                    tasks.push(savedTask);
+                    if (!tasks.some(t => t.id === docRef.id)) {
+                        tasks.push(savedTask);
+                    }
 
                     formDiv.remove();
                     openCalendarDetailCard(dateStr, isMonthView, isWeekdayView);
@@ -3273,7 +3297,8 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
                 catColor = getTaskColor(t.id);
             }
 
-            let metaDisplay = t.dueTime ? `⏰ ${t.dueTime}` : '';
+            // Hide time if default '23:59'
+            let metaDisplay = (t.dueTime && t.dueTime !== '23:59') ? `⏰ ${t.dueTime}` : '';
             if (isMonthView || isWeekdayView) {
                 const d = parseTaskDate(t.dueDate);
                 if (d) metaDisplay = `📅 ${d.getDate()}/${d.getMonth() + 1} ${metaDisplay}`;

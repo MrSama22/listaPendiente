@@ -1386,10 +1386,29 @@ ul.styled-list {
 }
 
 .touch-dragging-clone {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    color: white !important;
-    padding: 8px 12px;
-    font-size: 12px;
+    /* Al quitar el background forzado, el clon usará automáticamente
+       el color de fondo (inline style) que copió de la tarea original */
+       
+    font-size: 10px;
+    
+    /* Opcional: Un poco de sombra para que destaque al flotar */
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05); /* Un efecto sutil de "levantado" */
+    border-radius: 5px;
+    opacity: 0.95;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: left;
+    /* Align text left */
+    /* i need to add the text to the left and center it on y axis into the middle */
+    padding-left: 2px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 10px;
+
+
 }
 
 /*.task-item.completed .task-info{
