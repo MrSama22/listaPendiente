@@ -2593,8 +2593,8 @@ function renderCalendar() {
     // We insert arrow directly into H3 to keep them grouped and centered
     monthYrEl.innerHTML = `
         <span style="vertical-align:middle;">${mNames[m]} ${y}</span>
-        <span id="calFilterArrow" style="cursor:pointer; font-size:0.8em; opacity:0.7; vertical-align:middle; margin-left:8px; display:inline-block; padding:4px;">▼</span>
-        <div id="calCustomFilterDropdown" style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.95); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:1rem; font-weight:normal; text-align:left;"></div>
+        <span id="calFilterArrow" style="cursor:pointer; font-size:0.1em; opacity:0.7; vertical-align:middle; margin-left:4px; display:inline-block; padding:4px;">▼</span>
+        <div id="calCustomFilterDropdown" style="display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.4); backdrop-filter:blur(7px); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px; min-width:180px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); font-size:1rem; font-weight:normal; text-align:left;"></div>
     `;
 
     // Ensure parent relative for dropdown
@@ -3649,7 +3649,7 @@ function initAIConfigUI() {
 
             if (statusDiv) {
                 statusDiv.style.display = 'block';
-                statusDiv.style.backgroundColor = '#d4edda';
+                statusDiv.style.backgroundColor = '#1a1b1bff';
                 statusText.textContent = key ? 'IA Activada y Configurada' : 'Configuración guardada (IA desactivada)';
             }
 
@@ -3661,7 +3661,7 @@ function initAIConfigUI() {
     if (statusDiv && statusText) {
         if (AIHelper.isAvailable()) {
             statusDiv.style.display = 'block';
-            statusDiv.style.backgroundColor = '#d4edda';
+            statusDiv.style.backgroundColor = '#0000008a';
             statusText.textContent = 'IA Activada';
         }
     }
@@ -4069,7 +4069,7 @@ function showBatchReminderModal(mode, selectedIds, data) {
                 ${useDueDatesOption}
                 
                 <div id="batchDateContainer" class="form-group" style="${mode === 'individual' ? 'display:none; margin-left: 20px;' : ''}">
-                    <label>Fecha y Hora del Evento:</label>
+                    <label>Fecha y Hora del Recordatorio:</label>
                     <input type="datetime-local" id="batchReminderDate" value="${dateStr}" style="width: 100%; padding: 8px;">
                 </div>
 

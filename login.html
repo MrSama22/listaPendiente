@@ -454,7 +454,7 @@ Prioridad: {priority}</textarea>
                         <button id="saveAIConfigBtn" class="ai-button">Guardar Configuración de IA</button>
 
                         <div id="aiStatus"
-                            style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none; border: 1px solid rgba(0,0,0,0.1);">
+                            style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none; border: 1px solid rgba(0,0,0,0.1);background-color: rgb(43 47 44);">
                             <strong>Estado:</strong> <span id="aiStatusText"></span>
                         </div>
 
@@ -490,14 +490,14 @@ Prioridad: {priority}</textarea>
                             Estudio).
                             Estas categorías son opcionales.</p>
 
-                        <div class="form-group" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                        <div class="form-group" style="background: #f9f9f9; padding: 15px; border-radius: 8px; background-color: rgba(255,255,255,0.04);">
                             <label>Crear Nueva Categoría</label>
                             <div style="display: flex; gap: 10px; margin-top: 10px;">
                                 <input type="text" id="newCatName" placeholder="Nombre (ej: Trabajo)" style="flex: 2;">
-                                <input type="text" id="newCatEmoji" placeholder="Emoji (💼)"
+                                <input type="text" id="newCatEmoji" placeholder="Emoji"
                                     style="flex: 0.5; text-align: center;">
-                                <input type="color" id="newCatColor" value="#4CAF50"
-                                    style="flex: 0.5; height: 38px; padding: 2px;">
+                                <input type="color" id="newCatColor" value="#ffffff"
+                                    style="flex: 0.5; height: 38px; padding: 2px; ">
                                 <button id="addCategoryBtn" class="secondary" style="flex: 1;">➕ Crear</button>
                             </div>
                         </div>

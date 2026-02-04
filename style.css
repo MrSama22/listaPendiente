@@ -230,6 +230,33 @@ button:disabled {
 
 }
 
+/* Fix: Line-through EVERYTHING in completed tasks including categories */
+/* Fix: Line-through EVERYTHING in completed tasks including categories */
+.task-item.completed .task-info,
+.task-item.completed .task-category,
+.task-item.completed h3,
+.task-item.completed span,
+.task-item.completed div:not(.task-actions) {
+    text-decoration: line-through !important;
+    opacity: 0.8;
+}
+
+/* EXCEPTION: Do NOT strike through the actions buttons */
+/* EXCEPTION: Do NOT strike through the actions buttons */
+/* Container: Allow default opacity logic (hide/show) */
+.task-item.completed .task-actions {
+    text-decoration: none !important;
+}
+
+/* Children: Ensure they look normal when visible */
+.task-item.completed .task-actions button,
+.task-item.completed .task-actions span,
+.task-item.completed .task-actions i,
+.task-item.completed .task-actions svg {
+    text-decoration: none !important;
+    opacity: 1 !important;
+}
+
 .task-info {
     flex-grow: 1;
     text-transform: capitalize;
@@ -519,6 +546,7 @@ button.logout:hover {
     color: #fff;
     font-weight: normal;
     border: none;
+    font-family: system-ui
 }
 
 .weekdays {
@@ -529,8 +557,8 @@ button.logout:hover {
     font-weight: bold;
     width: 100%;
     box-sizing: border-box;
-    
-    
+
+
 }
 
 .weekdays div {
@@ -551,7 +579,8 @@ button.logout:hover {
     grid-auto-rows: minmax(60px, auto);
     border-top: 1px solid #e0e0e0;
     border-left: 1px solid #e0e0e0;
-    width: 100%; /* 100% del ancho del contenedor se desactiva con margin 10 */
+    width: 100%;
+    /* 100% del ancho del contenedor se desactiva con margin 10 */
     box-sizing: border-box;
     /*margin: 10px;*/
 }
@@ -1388,12 +1417,13 @@ ul.styled-list {
 .touch-dragging-clone {
     /* Al quitar el background forzado, el clon usará automáticamente
        el color de fondo (inline style) que copió de la tarea original */
-       
+
     font-size: 10px;
-    
+
     /* Opcional: Un poco de sombra para que destaque al flotar */
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-    transform: scale(1.05); /* Un efecto sutil de "levantado" */
+    transform: scale(1.05);
+    /* Un efecto sutil de "levantado" */
     border-radius: 5px;
     opacity: 0.95;
     text-align: left;
