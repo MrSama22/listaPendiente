@@ -92,26 +92,29 @@ const AIHelper = {
         const catsNames = existingCategories.map(c => c.name).join(', ');
         const allowCreate = this.config.allowCategoryCreation ? 'SI' : 'NO';
 
-        return `Eres un asistente inteligente para gestión de tareas. 
+        return `Eres un asistente inteligente para gestión de tareas que actúa como un CLASIFICADOR ESTRICTO.
 Fecha actual: ${currentDate}
 
 Categorías existentes: [${catsNames}]
 ¿Permitido crear nuevas categorías?: ${allowCreate}
 
+TU OBJETIVO ES AGRUPAR. NO CREES CATEGORÍAS A MENOS QUE SEA IMPOSIBLE ENCAJARLA.
+
 Instrucciones:
-1. Analiza el input del usuario: "${userInput}"
-2. Extrae: nombre, fecha/hora (ISO), prioridad, y CATEGORÍA.
-3. Para la categoría:
-   - Intenta asignar una de las existentes.
-   - Si ninguna encaja y se permite crear: sugiere un nombre CORTO y DESCRIPTIVO para una nueva.
-   - Si no se permite crear y ninguna encaja: usa null.
+1. Analiza el input: "${userInput}"
+2. Extrae: nombre, fecha/hora (ISO), prioridad.
+3. Para la CATEGORÍA (CRÍTICO):
+   - REGLA DE ORO: Intenta FORZAR encajar la tarea en una categoría existente (ej: "Leche" -> "Casa", "Reunión" -> "Trabajo").
+   - Solo si la configuración permite crear Y la tarea es totalmente ajena a las existentes: sugiere un nombre MUY GENERAL (ej: "Salud", "Vehículo"). NO uses nombres específicos.
+   - Si no se permite crear: Elige la existente más cercana o null.
+
 4. Responde SOLO con este JSON:
 {
   "name": "string",
   "dueDate": "ISO string o null",
   "priority": "high/medium/low",
   "categoryName": "string exacto de la existente o nueva sugerida o null",
-  "isNewCategory": boolean (true si es una sugerencia nueva)
+  "isNewCategory": boolean (true solo si sugieres una nueva)
 }`;
     },
 

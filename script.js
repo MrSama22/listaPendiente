@@ -1775,6 +1775,16 @@ function initTaskListeners(uid) {
     unsubscribe = tasksCol.orderBy('createdAt').onSnapshot(async snap => {
         tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // Detectar cambios para auto-categorización (solo nuevas tareas externas)
+        snap.docChanges().forEach(change => {
+            if (change.type === 'added') {
+                const newTask = { id: change.doc.id, ...change.doc.data() };
+                if (typeof autoCategorizeTask === 'function') {
+                    autoCategorizeTask(newTask);
+                }
+            }
+        });
+
         renderTasks();
         renderCalendar();
 
@@ -1802,7 +1812,67 @@ function initTaskListeners(uid) {
     }, err => console.error("Error escuchando tareas:", err));
 }
 
-const addTaskDB = task => tasksCol.add(task);
+
+// Auto-Categorización de Tareas Externas (Make, IA, etc)
+async function autoCategorizeTask(task) {
+    // 1. Filtro: Ignorar tareas creadas desde la Web o antiguas (> 5 min)
+    if (task.origin === 'web') return;
+
+    // Ignorar si ya tiene categoría
+    if (task.categoryId) return;
+
+    const created = task.createdAt ? task.createdAt.toDate() : new Date();
+    const now = new Date();
+    const diffMins = (now - created) / 1000 / 60;
+
+    // Si la tarea tiene más de 5 minutos, asumimos que es vieja y la ignoramos para evitar bucles
+    if (diffMins > 5) return;
+
+    console.log('🤖 IA Auto-Categorizando nueva tarea:', task.name);
+
+    if (typeof AIHelper === 'undefined' || !AIHelper.isAvailable()) return;
+
+    try {
+        const categories = window.categoryManager ? window.categoryManager.categories : [];
+        // Usamos el nombre de la tarea como input para la IA
+        const result = await AIHelper.processNaturalLanguage(task.name, categories);
+
+        if (result.categoryName) {
+            let targetCatId = null;
+            // Buscar si la categoría ya existe (ignorando mayúsculas/minúsculas)
+            const existing = categories.find(c => c.name.toLowerCase() === result.categoryName.toLowerCase());
+
+            if (existing) {
+                targetCatId = existing.id;
+            } else if (result.isNewCategory && AIHelper.config.allowCategoryCreation) {
+                // Crear nueva categoría si está permitido
+                const hue = Math.floor(Math.random() * 360);
+                const color = `hsl(${hue}, 70%, 80%)`;
+                const emoji = "🤖"; // Emoji por defecto para auto-creadas
+
+                // Asumimos que addCategory devuelve el ID o promesa resuelta
+                // Nota: categoryManager.addCategory en este código parece void, pero la IA lo manejará
+                // Intentaremos crearla. Si la función addCategory no devuelve ID, tendremos que buscarla.
+                await window.categoryManager.addCategory(result.categoryName, emoji, color);
+
+                // Pequeña espera y búsqueda
+                const freshCats = window.categoryManager.categories;
+                const justCreated = freshCats.find(c => c.name === result.categoryName);
+                if (justCreated) targetCatId = justCreated.id;
+            }
+
+            if (targetCatId) {
+                await updateTaskDB(task.id, { categoryId: targetCatId });
+                console.log(`✅ Tarea "${task.name}" auto-asignada a: ${result.categoryName}`);
+                if (typeof Toast !== 'undefined') Toast.info(`🤖 Tarea clasificada en: ${result.categoryName}`);
+            }
+        }
+    } catch (e) {
+        console.error('❌ Error en auto-categorización:', e);
+    }
+}
+
+const addTaskDB = task => tasksCol.add({ ...task, origin: 'web' });
 const updateTaskDB = (id, data) => tasksCol.doc(id).update(data);
 const deleteTaskDB = id => tasksCol.doc(id).delete();
 // Export for app-init.js access
@@ -3133,7 +3203,8 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
                 dueTime: time,
                 categoryId: catId || '',
                 completed: false,
-                createdAt: firebase.firestore.Timestamp.now()
+                createdAt: firebase.firestore.Timestamp.now(),
+                origin: 'web'
             };
 
             try {
