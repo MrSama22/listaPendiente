@@ -2877,6 +2877,10 @@ function handleTouchStart(e) {
     const touch = e.touches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+
+    // Safety cleanup
+    if (touchClone) cleanupTouchDrag();
+
     touchDraggedEl = taskEl;
     touchDraggedTaskId = taskEl.dataset.id;
 
@@ -2900,6 +2904,7 @@ function handleTouchStart(e) {
         `;
         document.body.appendChild(touchClone);
         taskEl.classList.add('touch-dragging-source');
+        touchClone.style.pointerEvents = 'none'; // Prevent interfering with drop target
     }, 150);
 }
 
@@ -2999,6 +3004,7 @@ function addTouchDragToCalendarTasks() {
         taskEl.addEventListener('touchstart', handleTouchStart, { passive: false });
         taskEl.addEventListener('touchmove', handleTouchMove, { passive: false });
         taskEl.addEventListener('touchend', handleTouchEnd, { passive: false });
+        taskEl.addEventListener('touchcancel', cleanupTouchDrag, { passive: false });
     });
 }
 
@@ -3029,6 +3035,12 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
     const actionBtn = document.getElementById('calendarDetailsActionBtn');
 
     if (!modal) return;
+
+    // Fix: Hide any potential conflicting menus (legacy edit modal or context menus)
+    const contextMenus = document.querySelectorAll('.custom-context-menu');
+    contextMenus.forEach(m => m.remove());
+    const editModal = document.getElementById('editModal');
+    if (editModal) editModal.style.display = 'none';
 
     // Reset content
     bodyEl.innerHTML = '';
@@ -3288,28 +3300,35 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
 
             const actionsContainer = item.querySelector('.card-item-actions');
 
+            const handleAction = (evt, callback) => {
+                evt.stopPropagation();
+                if (evt.type === 'touchend') evt.preventDefault(); // Prevent double click emulation
+                callback();
+            };
+
             const checkBtn = document.createElement('button');
             checkBtn.className = 'action-btn check-btn';
             checkBtn.innerHTML = t.completed ? '↩️' : '✅';
-            checkBtn.onclick = async (e) => { e.stopPropagation(); await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); };
+            checkBtn.onclick = (e) => handleAction(e, async () => { await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); });
+            checkBtn.ontouchend = (e) => handleAction(e, async () => { await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); });
 
             const editBtn = document.createElement('button');
             editBtn.className = 'action-btn edit-btn';
             editBtn.innerHTML = '✏️';
-            editBtn.onclick = (e) => { e.stopPropagation(); modal.style.display = 'none'; showEditModal(t.id); };
+            editBtn.onclick = (e) => handleAction(e, () => { modal.style.display = 'none'; showEditModal(t.id); });
+            editBtn.ontouchend = (e) => handleAction(e, () => { modal.style.display = 'none'; showEditModal(t.id); });
 
             const remBtn = document.createElement('button');
             remBtn.className = 'action-btn rem-btn';
             remBtn.innerHTML = '🔔';
-            remBtn.onclick = (e) => { e.stopPropagation(); showReminderConfigModal(t); };
+            remBtn.onclick = (e) => handleAction(e, () => showReminderConfigModal(t));
+            remBtn.ontouchend = (e) => handleAction(e, () => showReminderConfigModal(t));
 
             const delBtn = document.createElement('button');
             delBtn.className = 'action-btn del-btn';
             delBtn.innerHTML = '🗑️';
-            delBtn.onclick = async (e) => {
-                e.stopPropagation();
-                if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); }
-            };
+            delBtn.onclick = (e) => handleAction(e, async () => { if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); } });
+            delBtn.ontouchend = (e) => handleAction(e, async () => { if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); } });
 
             actionsContainer.appendChild(checkBtn);
             actionsContainer.appendChild(editBtn);
