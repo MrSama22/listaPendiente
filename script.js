@@ -2379,6 +2379,11 @@ function createTaskElement(task) {
     }, { passive: false });
 
     el.addEventListener('touchend', (e) => {
+        // PERMITIR CLICKS EN BOTONES: Si el toque terminó en un botón, salimos y dejamos que el evento click nativo ocurra.
+        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.task-actions')) {
+            return;
+        }
+
         clearTimeout(longPressTimer);
 
         if (isScrolling || isLongPress) return;
@@ -2888,23 +2893,25 @@ function handleTouchStart(e) {
     setTimeout(() => {
         if (!touchDraggedEl) return;
 
+        // Clone 1:1 without extra effects as requested
         touchClone = taskEl.cloneNode(true);
         touchClone.classList.add('touch-dragging-clone');
-        touchClone.style.cssText = `
-            position: fixed;
-            top: ${touch.clientY - 20}px;
-            left: ${touch.clientX - 50}px;
-            width: ${taskEl.offsetWidth}px;
-            pointer-events: none;
-            z-index: 10000;
-            opacity: 0.9;
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            border-radius: 8px;
-        `;
+
+        // Mantener estilo original EXACTO, solo posición fija
+        // Al clonar, los estilos inline se mantienen. Solo necesitamos posicionar.
+        touchClone.style.position = 'fixed';
+        touchClone.style.top = `${touch.clientY - 20}px`;
+        touchClone.style.left = `${touch.clientX - 50}px`;
+        touchClone.style.width = `${taskEl.offsetWidth}px`;
+        touchClone.style.height = `${taskEl.offsetHeight}px`; // Ensure height matches
+        touchClone.style.margin = '0'; // Reset margins
+        touchClone.style.pointerEvents = 'none'; // Crucial
+        touchClone.style.zIndex = '9999';
+        touchClone.style.opacity = '0.9'; // Slight transparency to see underneath
+
         document.body.appendChild(touchClone);
         taskEl.classList.add('touch-dragging-source');
-        touchClone.style.pointerEvents = 'none'; // Prevent interfering with drop target
+        // No Pointer events on clone
     }, 150);
 }
 
