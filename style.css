@@ -1284,6 +1284,8 @@ ul.styled-list {
         display: flex;
         z-index: 5;
         height: 100%;
+        backdrop-filter: blur(9px);
+        height: 97.5%;
         /* User preference for height on mobile */
 
         /* Glassmorphism inherits from global .task-actions */
@@ -1293,7 +1295,7 @@ ul.styled-list {
 
     .task-item.completed.selected .task-actions {
         position: absolute;
-        right: 10px;
+        right: 0px;
         top: 50%;
         display: flex;
         z-index: 5;
@@ -1301,17 +1303,17 @@ ul.styled-list {
         /* --- INICIO DEL EFECTO GLASSMORPHISM --- */
 
         /* 1. Fondo semitransparente (usamos un blanco sutil) */
-        background: rgba(255, 255, 255, 0.3);
+        background: rgb(139 139 139 / 28%);
 
         /* 2. Desenfoque (corregí el "10pxpx" a "8px" que se ve mejor en un menú pequeño) */
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
         /* Para Safari */
 
         /* 3. Borde sutil y redondeado */
-        border-radius: 50px;
+        border-radius: 16px;
         /* Bordes bien redondeados para un look moderno */
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        /*border: 1px solid rgba(255, 255, 255, 0.2);*/
 
         /* 4. Sombra para dar profundidad */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

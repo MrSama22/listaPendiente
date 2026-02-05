@@ -1658,8 +1658,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function closeModalGeneric(modalElement) {
     if (modalElement) {
-        if (modalElement.id === 'reminderModal') modalElement.remove();
-        else modalElement.style.display = 'none';
+        if (modalElement.id === 'reminderModal') {
+            modalElement.remove();
+        } else {
+            modalElement.style.display = 'none';
+            // Fix: Unlock scroll if closing the detail card
+            if (modalElement.id === 'calendarDetailsModal') {
+                document.body.style.overflow = '';
+                // Also clear state if we close it generically
+                if (window.cdState) window.cdState.isOpen = false;
+            }
+        }
     }
 }
 document.addEventListener('keydown', function (e) {
@@ -1787,6 +1796,11 @@ function initTaskListeners(uid) {
 
         renderTasks();
         renderCalendar();
+
+        // Fix: Refresh Detail Card if open (Real-time updates)
+        if (window.cdState && window.cdState.isOpen && typeof openCalendarDetailCard === 'function') {
+            openCalendarDetailCard(...window.cdState.args);
+        }
 
         if (firstLoad) {
             loadUserSettings(uid);
@@ -3115,6 +3129,9 @@ window.renderCalendarWithTouch = function () {
 let currentCardFilterCategory = null;
 
 function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = false) {
+    // Fix: Save state for real-time updates
+    window.cdState = { isOpen: true, args: [dateStr, isMonthView, isWeekdayView] };
+
     const modal = document.getElementById('calendarDetailsModal');
     const titleEl = document.getElementById('calendarDetailsTitle');
     const subtitleEl = document.getElementById('calendarDetailsSubtitle');
@@ -3164,10 +3181,10 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
         }
 
         formDiv.innerHTML = `
-            <input type="text" id="qaName" placeholder="✨ Nueva tarea..." style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.2); color:white; padding:0px 0; font-size:1.1em; outline:none; width:100%;">
+            <input type="text" id="qaName" placeholder="✨ Nueva tarea..." style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.2); color:white; font-size:1.1em; outline:none; width:100%;">
             <div style="display:flex; gap:10px; margin-top:5px;">
                 <input type="time" id="qaTime" style="background:rgba(0,0,0,0.3); border:none; color:white; padding:6px; border-radius:6px; outline:none;">
-                <select id="qaCat" style="background:rgba(0,0,0,0.3); border:none; color:white; border-radius:6px; flex:1; padding:0px; outline:none; margin:0px;">${catOptions}</select>
+                <select id="qaCat" style="background:rgba(0,0,0,0.3); border:none; color:white; border-radius:6px; flex:1; outline:none; margin:0px;">${catOptions}</select>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
                 <button id="qaCancel" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:6px 12px; border-radius:6px; cursor:pointer;">Cancelar</button>
@@ -3403,35 +3420,28 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
 
             const actionsContainer = item.querySelector('.card-item-actions');
 
-            const handleAction = (evt, callback) => {
-                evt.stopPropagation();
-                if (evt.type === 'touchend') evt.preventDefault(); // Prevent double click emulation
-                callback();
-            };
+            // Fix: Mobile Click Issue - Remove ontouchend and rely on click.
+            // Modern mobile browsers handle click well. The previous dual-handler with preventDefault was blocking it.
 
             const checkBtn = document.createElement('button');
             checkBtn.className = 'action-btn check-btn';
             checkBtn.innerHTML = t.completed ? '↩️' : '✅';
-            checkBtn.onclick = (e) => handleAction(e, async () => { await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); });
-            checkBtn.ontouchend = (e) => handleAction(e, async () => { await toggleTaskStatus(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); });
+            checkBtn.onclick = (e) => { e.stopPropagation(); toggleTaskStatus(t.id); }; // Auto-refresh handled by listener
 
             const editBtn = document.createElement('button');
             editBtn.className = 'action-btn edit-btn';
             editBtn.innerHTML = '✏️';
-            editBtn.onclick = (e) => handleAction(e, () => { modal.style.display = 'none'; showEditModal(t.id); });
-            editBtn.ontouchend = (e) => handleAction(e, () => { modal.style.display = 'none'; showEditModal(t.id); });
+            editBtn.onclick = (e) => { e.stopPropagation(); modal.style.display = 'none'; showEditModal(t.id); };
 
             const remBtn = document.createElement('button');
             remBtn.className = 'action-btn rem-btn';
             remBtn.innerHTML = '🔔';
-            remBtn.onclick = (e) => handleAction(e, () => showReminderConfigModal(t));
-            remBtn.ontouchend = (e) => handleAction(e, () => showReminderConfigModal(t));
+            remBtn.onclick = (e) => { e.stopPropagation(); showReminderConfigModal(t); };
 
             const delBtn = document.createElement('button');
             delBtn.className = 'action-btn del-btn';
             delBtn.innerHTML = '🗑️';
-            delBtn.onclick = (e) => handleAction(e, async () => { if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); } });
-            delBtn.ontouchend = (e) => handleAction(e, async () => { if (confirm('¿Eliminar esta tarea?')) { await deleteTask(t.id); openCalendarDetailCard(dateStr, isMonthView, isWeekdayView); } });
+            delBtn.onclick = (e) => { e.stopPropagation(); if (confirm('¿Eliminar esta tarea?')) deleteTask(t.id); };
 
             actionsContainer.appendChild(checkBtn);
             actionsContainer.appendChild(editBtn);
@@ -3451,6 +3461,9 @@ function openCalendarDetailCard(dateStr, isMonthView = false, isWeekdayView = fa
         currentCardFilterCategory = null;
         if (typeof renderCalendar === 'function') renderCalendar();
         document.removeEventListener('keydown', onEscKey);
+
+        // Fix: Update state
+        if (window.cdState) window.cdState.isOpen = false;
     };
 
     const onEscKey = (e) => {
